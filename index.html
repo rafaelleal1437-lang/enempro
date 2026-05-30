@@ -4,185 +4,214 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ENEMPro — Estude. Evolua. Passe.</title>
-  <meta name="description" content="A plataforma gamificada de aprovação no ENEM. XP, streak, missões, ranking e muito mais."/>
+  <meta name="description" content="A plataforma de estudos gamificada para o ENEM. Questões, simulados, estratégias e muito mais."/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Bebas+Neue&display=swap"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap"/>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    html,body,#root{min-height:100vh;background:#080810}
-    ::-webkit-scrollbar{width:4px}
-    ::-webkit-scrollbar-thumb{background:#1E2035;border-radius:2px}
+    html,body,#root{min-height:100vh;background:#F7F9F7}
+    ::-webkit-scrollbar{width:5px}
+    ::-webkit-scrollbar-thumb{background:#C8DEC8;border-radius:3px}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+    @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+    @keyframes xpUp{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-40px)}}
+    @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+    @keyframes spin{to{transform:rotate(360deg)}}
   </style>
 </head>
 <body>
   <div id="root"></div>
   <script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef } = React;
 
+// ── TEMA ────────────────────────────────────────────────────────
 const C = {
-  bg:"#080810", ink:"#0C0C18", surface:"#10101E", lift:"#161628",
-  edge:"#1E1E35", edgeLight:"#252540",
-  lime:"#39FF14", limeD:"#22C55E", limeFade:"rgba(57,255,20,0.08)",
-  amber:"#FFB800", amberFade:"rgba(255,184,0,0.08)",
-  rose:"#FF3860", roseFade:"rgba(255,56,96,0.07)",
-  sky:"#38BDF8", violet:"#818CF8",
-  snow:"#F0F0FF", ash:"#5A5A7A", fog:"#35354A",
-  white:"#FFFFFF",
+  // Fundos
+  bg:"#F7F9F7", white:"#FFFFFF", bgDark:"#1A2E1A",
+  // Verdes naturais
+  g900:"#14401A", g800:"#1A5C22", g700:"#1E7A2C",
+  g600:"#2A9A3A", g500:"#3AB54A", g400:"#5ECC6C",
+  g100:"#E8F5E9", g50:"#F0FAF0",
+  // Neutros
+  n900:"#1C2B1C", n700:"#3D4F3D", n500:"#6B7F6B",
+  n300:"#A8BAA8", n100:"#E4EDE4", n50:"#F2F7F2",
+  // Acento
+  amber:"#D97706", amberL:"#FEF3C7",
+  rose:"#DC2626", roseL:"#FEE2E2",
+  sky:"#0369A1", skyL:"#E0F2FE",
 };
-const ff="'Outfit',sans-serif";
-const fd="'Bebas Neue',sans-serif";
+const ff = "'Outfit',sans-serif";
+const fd = "'Playfair Display',serif";
+
+const CREDITS_START = 10000;
+const CREDIT_COST = 2500;
 
 function getLevel(xp){
-  const tiers=[0,100,250,500,900,1400,2000,2700,3600,5000];
+  const t=[0,100,300,600,1000,1500,2100,2800,3700,5000];
   let lv=0;
-  for(let i=0;i<tiers.length;i++) if(xp>=tiers[i]) lv=i+1;
-  const cur=tiers[lv-1]||0, nxt=tiers[lv]||cur+1000;
-  return{level:lv,pct:Math.round(((xp-cur)/(nxt-cur))*100),nextXp:nxt,curXp:xp};
+  for(let i=0;i<t.length;i++) if(xp>=t[i]) lv=i+1;
+  const cur=t[lv-1]||0, nxt=t[lv]||cur+1500;
+  return{level:lv,pct:Math.round(((xp-cur)/(nxt-cur))*100),nextXp:nxt};
 }
 
+// ── DADOS ────────────────────────────────────────────────────────
 const QUESTIONS=[
   {id:1,area:"Matemática",year:2023,q:"Uma empresa precisa transportar 34 toneladas usando caminhões de 4 toneladas. Qual o número mínimo de caminhões?",opts:["7","8","9","10"],ans:2,xp:15,exp:"34 ÷ 4 = 8,5. Arredonda para cima: 9 caminhões."},
   {id:2,area:"Português",year:2022,q:"Saussure compara a língua a outros sistemas de signos. Isso define língua como:",opts:["Código exclusivo da fala","Sistema biológico","Signos articulados vocalmente","Sistema de signos entre outros sistemas"],ans:3,xp:15,exp:"Saussure define língua como um sistema entre outros sistemas de signos."},
   {id:3,area:"Biologia",year:2023,q:"Após uso de antibióticos, bactérias resistentes sobrevivem. Qual processo evolutivo explica isso?",opts:["Mutação induzida","Seleção natural de variantes pré-existentes","Adaptação fenotípica","Herança de caracteres adquiridos"],ans:1,xp:15,exp:"Seleção natural: bactérias já resistentes sobrevivem e se reproduzem."},
-  {id:4,area:"História",year:2022,q:"O Renascimento rompeu com o pensamento medieval principalmente por:",opts:["Valorizar a fé acima da razão","Retomar valores greco-romanos e o antropocentrismo","Defender a Igreja nas artes","Propor retorno ao feudalismo"],ans:1,xp:15,exp:"O Humanismo renascentista colocou o ser humano no centro, em oposição ao teocentrismo medieval."},
+  {id:4,area:"História",year:2022,q:"O Renascimento rompeu com o pensamento medieval principalmente por:",opts:["Valorizar a fé acima da razão","Retomar valores greco-romanos e o antropocentrismo","Defender a Igreja nas artes","Propor retorno ao feudalismo"],ans:1,xp:15,exp:"O Humanismo colocou o ser humano no centro, em oposição ao teocentrismo medieval."},
   {id:5,area:"Química",year:2023,q:"2NaHCO₃→Na₂CO₃+H₂O+CO₂. Com 16,8g de NaHCO₃ (M=84), qual volume de CO₂ a 0°C/1atm?",opts:["1,12 L","2,24 L","4,48 L","6,72 L"],ans:1,xp:20,exp:"0,2 mol NaHCO₃ → 0,1 mol CO₂ → 0,1×22,4 = 2,24 L."},
   {id:6,area:"Geografia",year:2022,q:"Regiões metropolitanas brasileiras caracterizam-se por:",opts:["Distribuição equilibrada de renda","Integração funcional ao redor de uma metrópole","Redução dos fluxos migratórios","Descentralização industrial"],ans:1,xp:15,exp:"Integração funcional de municípios ao redor de uma cidade polo."},
 ];
 
 const PLANS=[
-  {id:"free",label:"Gratuito",sub:"Para começar",price:0,period:"",cta:"Criar conta",hi:false,
-   items:["10 questões por dia","Streak e XP básico","Anúncios exibidos","Ranking geral"]},
-  {id:"basico",label:"Básico",sub:"Mais popular",price:39,period:"/mês",cta:"Assinar Básico",hi:false,
-   items:["Questões ilimitadas","2 simulados/mês","Sem anúncios","Correção por IA","Missões premium"]},
-  {id:"premium",label:"Premium",sub:"Melhor custo-benefício",price:59,period:"/mês",cta:"Assinar Premium",hi:true,
-   items:["Tudo do Básico","Simulados ilimitados","Redação com professor","Mentoria semanal ao vivo","Suporte 24h","Grupo no WhatsApp"]},
-  {id:"vitalicio",label:"Vitalício",sub:"Pague uma vez",price:297,period:" único",cta:"Garantir Acesso",hi:false,
-   items:["Acesso permanente","Tudo do Premium","Todos os ENEMs futuros","Suporte VIP"]},
-];
-
-const MISSIONS=[
-  {label:"10 questões hoje",prog:3,total:10,xp:50,coins:5,done:false},
-  {label:"Manter sequência",prog:1,total:1,xp:25,coins:2,done:true},
-  {label:"Sessão de 25 min",prog:0,total:1,xp:40,coins:4,done:false},
+  {id:"basico",label:"Básico",price:39,period:"/mês",credits:"Ilimitado",color:C.g600,cta:"Assinar Básico",
+   items:["Créditos ilimitados","2 simulados/mês","Sem anúncios","Correção por IA","Missões premium"]},
+  {id:"premium",label:"Premium",price:59,period:"/mês",credits:"Ilimitado",color:C.g700,cta:"Assinar Premium",hi:true,
+   items:["Tudo do Básico","Simulados ilimitados","Redação com professor","Mentoria semanal","Suporte 24h","Grupo WhatsApp"]},
+  {id:"vitalicio",label:"Vitalício",price:297,period:" único",credits:"Ilimitado",color:C.amber,cta:"Garantir Acesso",
+   items:["Acesso permanente","Tudo do Premium","ENEMs futuros incluídos","Suporte VIP"]},
 ];
 
 const RANKING=[
-  {pos:1,name:"Ana Carolina",xp:4820,streak:45},{pos:2,name:"Pedro Henrique",xp:4650,streak:38},
-  {pos:3,name:"Mariana Silva",xp:4430,streak:31},{pos:4,name:"Lucas Ferreira",xp:3980,streak:27},
-  {pos:5,name:"Julia Santos",xp:3750,streak:22},{pos:6,name:"Você",xp:2340,streak:7,isUser:true},
-  {pos:7,name:"Carlos Lima",xp:2100,streak:5},{pos:8,name:"Fernanda Costa",xp:1980,streak:3},
+  {pos:1,name:"Ana Carolina",xp:4820,streak:45},
+  {pos:2,name:"Pedro Henrique",xp:4650,streak:38},
+  {pos:3,name:"Mariana Silva",xp:4430,streak:31},
+  {pos:4,name:"Lucas Ferreira",xp:3980,streak:27},
+  {pos:5,name:"Julia Santos",xp:3750,streak:22},
+  {pos:6,name:"Você",xp:2340,streak:7,isUser:true},
+  {pos:7,name:"Carlos Lima",xp:2100,streak:5},
+  {pos:8,name:"Fernanda Costa",xp:1980,streak:3},
 ];
 
-const SPIN_PRIZES=["50 XP","100 XP","20 coins","50 coins","Escudo","Premium 7d"];
-const SPIN_COLORS=["#39FF14","#22C55E","#FFB800","#F59E0B","#818CF8","#38BDF8"];
-
-export default function App(){
+// ── APP ──────────────────────────────────────────────────────────
+function App(){
   const [page,setPage]=useState("landing");
   const [authModal,setAuthModal]=useState(null);
   const [user,setUser]=useState(null);
   const [plan,setPlan]=useState(null);
   const [spinModal,setSpinModal]=useState(false);
-  const [xpPopup,setXpPopup]=useState(null);
+  const [creditModal,setCreditModal]=useState(false);
+  const [xpPop,setXpPop]=useState(null);
   const [days,setDays]=useState(166);
 
   useEffect(()=>{
-    const link=document.createElement("link");
-    link.rel="stylesheet";
-    link.href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Bebas+Neue&display=swap";
-    document.head.appendChild(link);
     setDays(Math.max(0,Math.ceil((new Date("2026-11-08")-new Date())/86400000)));
   },[]);
 
   const go=(p)=>{setPage(p);window.scrollTo(0,0);};
-  const login=(name,email)=>{setUser({name,email,plan:"free",xp:2340,coins:85,streak:7,shields:1});setAuthModal(null);go("dashboard");};
+  const login=(name,email)=>{
+    setUser({name,email,plan:"free",xp:2340,coins:85,streak:7,credits:CREDITS_START});
+    setAuthModal(null);go("dashboard");
+  };
   const logout=()=>{setUser(null);go("landing");};
   const openCheckout=(p)=>{setPlan(p);go("checkout");};
-  const addXP=(v)=>{if(!user)return;setUser(u=>({...u,xp:u.xp+v}));setXpPopup(`+${v} XP`);setTimeout(()=>setXpPopup(null),1800);};
-  const addCoins=(v)=>{if(!user)return;setUser(u=>({...u,coins:u.coins+v}));};
-  const lv=user?getLevel(user.xp):{level:1,pct:0,nextXp:100,curXp:0};
+
+  const spendCredits=(cost)=>{
+    if(!user) return false;
+    if(user.credits<cost){ setCreditModal(true); return false; }
+    setUser(u=>({...u,credits:u.credits-cost}));
+    return true;
+  };
+  const addXP=(v)=>{
+    if(!user)return;
+    setUser(u=>({...u,xp:u.xp+v}));
+    setXpPop(`+${v} XP`);
+    setTimeout(()=>setXpPop(null),1800);
+  };
+  const addCoins=(v)=>{ if(user) setUser(u=>({...u,coins:u.coins+v})); };
+
+  const lv=user?getLevel(user.xp):{level:1,pct:0,nextXp:100};
 
   return(
-    <div style={{background:C.bg,color:C.snow,fontFamily:ff,minHeight:"100vh",position:"relative"}}>
+    <div style={{background:C.bg,color:C.n900,fontFamily:ff,minHeight:"100vh"}}>
       <style>{`
-        *{box-sizing:border-box;margin:0;padding:0}
-        ::placeholder{color:${C.ash}}
-        ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:${C.edge};border-radius:2px}
-        @keyframes up{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-32px)}}
-        @keyframes in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes flicker{0%,100%{opacity:1}45%{opacity:.8}50%{opacity:1}55%{opacity:.7}}
-        @keyframes rotateWheel{to{transform:rotate(360deg)}}
-        @keyframes scanline{0%{background-position:0 0}100%{background-position:0 100%}}
-        input:focus{outline:none;border-color:${C.lime}!important}
-        .hov:hover{border-color:${C.edgeLight}!important;transform:translateY(-1px)}
+        .btn-green{background:${C.g700};color:#fff;border:none;border-radius:8px;padding:12px 24px;font-family:${ff};font-weight:700;font-size:15px;cursor:pointer;transition:all .2s}
+        .btn-green:hover{background:${C.g800};transform:translateY(-1px);box-shadow:0 4px 16px rgba(30,122,44,.25)}
+        .btn-outline{background:transparent;color:${C.g700};border:1.5px solid ${C.g400};border-radius:8px;padding:11px 22px;font-family:${ff};font-weight:600;font-size:14px;cursor:pointer;transition:all .2s}
+        .btn-outline:hover{background:${C.g50};transform:translateY(-1px)}
+        .card{background:#fff;border:1px solid ${C.n100};border-radius:16px;transition:all .2s}
+        .card:hover{box-shadow:0 8px 32px rgba(26,92,34,.08)}
+        input:focus{outline:none;border-color:${C.g500}!important;box-shadow:0 0 0 3px rgba(58,181,74,.12)}
       `}</style>
 
-      {/* Grain overlay */}
-      <div style={{position:"fixed",inset:0,backgroundImage:"url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='.03'/%3E%3C/svg%3E\")",pointerEvents:"none",zIndex:999,opacity:.4}}/>
-
-      {xpPopup&&<div style={{position:"fixed",top:72,right:20,background:C.lime,color:"#000",padding:"5px 14px",borderRadius:4,fontWeight:800,fontSize:13,zIndex:500,animation:"up 1.8s ease forwards",letterSpacing:1}}>{xpPopup}</div>}
+      {xpPop&&<div style={{position:"fixed",top:76,right:20,background:C.g700,color:"#fff",padding:"6px 16px",borderRadius:100,fontWeight:700,fontSize:13,zIndex:500,animation:"xpUp 1.8s ease forwards",boxShadow:"0 4px 12px rgba(30,122,44,.3)"}}>{xpPop}</div>}
 
       <Nav user={user} page={page} go={go} onLogin={()=>setAuthModal("login")} onRegister={()=>setAuthModal("register")} onLogout={logout} lv={lv} openSpin={()=>setSpinModal(true)}/>
 
-      <div style={{animation:"in .25s ease"}} key={page}>
+      <div style={{animation:"fadeIn .3s ease"}} key={page}>
         {page==="landing"    && <Landing days={days} go={go} setModal={setAuthModal} openCheckout={openCheckout}/>}
-        {page==="exercises"  && <Exercises user={user} setModal={setAuthModal} addXP={addXP} addCoins={addCoins}/>}
+        {page==="exercises"  && <Exercises user={user} setModal={setAuthModal} addXP={addXP} addCoins={addCoins} spendCredits={spendCredits} openCheckout={openCheckout}/>}
         {page==="strategies" && <Strategies/>}
-        {page==="ranking"    && <Ranking user={user}/>}
+        {page==="ranking"    && <Ranking/>}
         {page==="dashboard"  && user && <Dashboard user={user} go={go} openCheckout={openCheckout} lv={lv} openSpin={()=>setSpinModal(true)}/>}
         {page==="checkout"   && <Checkout plan={plan} go={go}/>}
       </div>
 
       {authModal&&<AuthModal mode={authModal} onClose={()=>setAuthModal(null)} onSwitch={m=>setAuthModal(m)} onSuccess={login}/>}
       {spinModal&&<SpinModal onClose={()=>setSpinModal(false)} addXP={addXP} addCoins={addCoins}/>}
+      {creditModal&&<CreditModal onClose={()=>setCreditModal(false)} openCheckout={openCheckout} setCreditModal={setCreditModal}/>}
     </div>
   );
 }
 
-/* ─── NAV ───────────────────────────────────────────────────────── */
+// ── NAV ──────────────────────────────────────────────────────────
 function Nav({user,page,go,onLogin,onRegister,onLogout,lv,openSpin}){
   return(
-    <header style={{position:"sticky",top:0,zIndex:100,borderBottom:`1px solid ${C.edge}`,background:"rgba(8,8,16,.96)",backdropFilter:"blur(24px)",height:56,display:"flex",alignItems:"center",padding:"0 28px",gap:24,justifyContent:"space-between"}}>
-      <div onClick={()=>go("landing")} style={{cursor:"pointer",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-        <svg width="28" height="28" viewBox="0 0 28 28"><rect width="28" height="28" rx="7" fill={C.lime}/><text x="14" y="20" textAnchor="middle" fontFamily="Bebas Neue" fontSize="18" fill="#000">E</text></svg>
-        <span style={{fontFamily:fd,fontSize:20,letterSpacing:4,color:C.snow}}>ENEM<span style={{color:C.lime}}>PRO</span></span>
+    <nav style={{position:"sticky",top:0,zIndex:100,background:"rgba(247,249,247,.97)",backdropFilter:"blur(20px)",borderBottom:`1px solid ${C.n100}`,height:62,display:"flex",alignItems:"center",padding:"0 28px",justifyContent:"space-between",boxShadow:"0 1px 0 rgba(0,0,0,.05)"}}>
+      {/* LOGO — clicável volta ao início */}
+      <div onClick={()=>go("landing")} style={{cursor:"pointer",display:"flex",alignItems:"center",gap:10,userSelect:"none"}}>
+        <div style={{width:36,height:36,background:`linear-gradient(135deg,${C.g700},${C.g500})`,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:`0 4px 12px rgba(30,122,44,.25)`}}>
+          <span style={{fontFamily:fd,fontSize:20,color:"#fff",fontWeight:900,lineHeight:1}}>E</span>
+        </div>
+        <div>
+          <span style={{fontFamily:fd,fontSize:18,color:C.g800,fontWeight:900,letterSpacing:.5}}>ENEM</span>
+          <span style={{fontFamily:fd,fontSize:18,color:C.g500,fontWeight:700}}>Pro</span>
+        </div>
       </div>
 
-      <nav style={{display:"flex",gap:2}}>
+      <div style={{display:"flex",gap:4}}>
         {[["exercises","Exercícios"],["strategies","Estratégias"],["ranking","Ranking"]].map(([p,l])=>(
-          <button key={p} onClick={()=>go(p)} style={{background:"transparent",border:"none",color:page===p?C.snow:C.ash,padding:"5px 14px",borderRadius:6,cursor:"pointer",fontFamily:ff,fontWeight:600,fontSize:13,borderBottom:page===p?`2px solid ${C.lime}`:"2px solid transparent",transition:"all .15s"}}>
+          <button key={p} onClick={()=>go(p)} style={{background:page===p?C.g50:"transparent",border:"none",color:page===p?C.g700:C.n500,padding:"6px 14px",borderRadius:8,cursor:"pointer",fontFamily:ff,fontWeight:600,fontSize:13,borderBottom:page===p?`2px solid ${C.g600}`:"2px solid transparent",transition:"all .15s"}}>
             {l}
           </button>
         ))}
-        {user&&<button onClick={()=>go("dashboard")} style={{background:"transparent",border:"none",color:page==="dashboard"?C.snow:C.ash,padding:"5px 14px",borderRadius:6,cursor:"pointer",fontFamily:ff,fontWeight:600,fontSize:13,borderBottom:page==="dashboard"?`2px solid ${C.lime}`:"2px solid transparent"}}>Dashboard</button>}
-      </nav>
+        {user&&<button onClick={()=>go("dashboard")} style={{background:page==="dashboard"?C.g50:"transparent",border:"none",color:page==="dashboard"?C.g700:C.n500,padding:"6px 14px",borderRadius:8,cursor:"pointer",fontFamily:ff,fontWeight:600,fontSize:13,borderBottom:page==="dashboard"?`2px solid ${C.g600}`:"2px solid transparent"}}>Dashboard</button>}
+      </div>
 
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         {user?(
           <>
-            <div style={{display:"flex",gap:12,alignItems:"center",background:C.surface,border:`1px solid ${C.edge}`,borderRadius:8,padding:"5px 14px",fontSize:12,fontWeight:700}}>
-              <span style={{color:C.rose}}>▲ {user.streak}d</span>
-              <span style={{color:C.fog,fontSize:10}}>|</span>
-              <span style={{color:C.lime}}>{user.xp.toLocaleString()} XP</span>
-              <span style={{color:C.fog,fontSize:10}}>|</span>
-              <span style={{color:C.amber}}>{user.coins} ◎</span>
+            <div style={{display:"flex",gap:10,alignItems:"center",background:C.g50,border:`1px solid ${C.n100}`,borderRadius:100,padding:"5px 14px",fontSize:12,fontWeight:700}}>
+              <span style={{color:C.rose}}>🔥 {user.streak}d</span>
+              <span style={{color:C.n300}}>|</span>
+              <span style={{color:C.g700}}>{user.xp.toLocaleString()} XP</span>
+              <span style={{color:C.n300}}>|</span>
+              <span style={{color:C.amber}}>◎ {user.coins}</span>
+              <span style={{color:C.n300}}>|</span>
+              <span style={{color:user.credits<2500?C.rose:C.g700}}>⚡ {user.credits.toLocaleString()}</span>
             </div>
-            <button onClick={openSpin} style={{background:"transparent",border:`1px solid ${C.violet}`,color:C.violet,padding:"5px 12px",borderRadius:6,cursor:"pointer",fontFamily:ff,fontWeight:700,fontSize:12}}>Girar</button>
-            <div onClick={onLogout} title="Sair" style={{width:30,height:30,borderRadius:6,background:C.lime,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,color:"#000",cursor:"pointer",fontSize:13,fontFamily:fd}}>{user.name[0].toUpperCase()}</div>
+            <button onClick={openSpin} className="btn-outline" style={{padding:"5px 12px",fontSize:12}}>Girar 🎰</button>
+            <div onClick={onLogout} title="Sair" style={{width:32,height:32,borderRadius:8,background:`linear-gradient(135deg,${C.g600},${C.g800})`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,color:"#fff",cursor:"pointer",fontSize:13}}>
+              {user.name[0].toUpperCase()}
+            </div>
           </>
         ):(
           <>
-            <button onClick={onLogin} style={{background:"transparent",border:`1px solid ${C.edge}`,color:C.ash,padding:"6px 16px",borderRadius:6,cursor:"pointer",fontFamily:ff,fontWeight:600,fontSize:13}}>Entrar</button>
-            <button onClick={onRegister} style={{background:C.lime,border:"none",color:"#000",padding:"6px 16px",borderRadius:6,cursor:"pointer",fontFamily:ff,fontWeight:700,fontSize:13}}>Começar grátis</button>
+            <button onClick={onLogin} className="btn-outline" style={{padding:"7px 18px"}}>Entrar</button>
+            <button onClick={onRegister} className="btn-green" style={{padding:"7px 18px"}}>Começar grátis</button>
           </>
         )}
       </div>
-    </header>
+    </nav>
   );
 }
 
-/* ─── LANDING ────────────────────────────────────────────────────── */
+// ── LANDING ───────────────────────────────────────────────────────
 function Landing({days,go,setModal,openCheckout}){
   const [count,setCount]=useState({d:0,h:0,m:0,s:0});
   useEffect(()=>{
@@ -194,159 +223,200 @@ function Landing({days,go,setModal,openCheckout}){
   },[]);
 
   return(
-    <main>
-      {/* ── HERO ─────────────────────────────────────────────── */}
-      <section style={{maxWidth:1080,margin:"0 auto",padding:"80px 28px 60px",display:"grid",gridTemplateColumns:"1fr 420px",gap:64,alignItems:"center"}}>
-        <div>
-          <p style={{color:C.lime,fontSize:11,fontWeight:700,letterSpacing:3,textTransform:"uppercase",marginBottom:20}}>Plataforma de aprovação ENEM 2026</p>
-          <h1 style={{fontFamily:fd,fontSize:88,lineHeight:.9,marginBottom:24,color:C.snow}}>
-            ESTUDE.<br/>EVOLUA.<br/><span style={{WebkitTextStroke:`2px ${C.lime}`,color:"transparent",animation:"flicker 4s infinite"}}>PASSE.</span>
-          </h1>
-          <p style={{color:C.ash,fontSize:16,lineHeight:1.8,marginBottom:32,maxWidth:400,fontWeight:300}}>
-            XP, streak, missões e ranking — a única plataforma que transforma a rotina de estudos em progressão real e mensurável.
-          </p>
+    <div>
+      {/* HERO */}
+      <section style={{background:`linear-gradient(160deg,${C.g900} 0%,${C.g800} 60%,${C.g700} 100%)`,padding:"80px 28px 72px",position:"relative",overflow:"hidden"}}>
+        {/* Decorative circles */}
+        <div style={{position:"absolute",top:-80,right:-80,width:400,height:400,borderRadius:"50%",background:"rgba(255,255,255,.03)",pointerEvents:"none"}}/>
+        <div style={{position:"absolute",bottom:-60,left:-60,width:280,height:280,borderRadius:"50%",background:"rgba(255,255,255,.02)",pointerEvents:"none"}}/>
 
-          {/* Countdown */}
-          <div style={{display:"flex",gap:3,marginBottom:32,alignItems:"flex-end"}}>
-            {[{v:count.d,l:"dias"},{v:count.h,l:"hr"},{v:count.m,l:"min"},{v:count.s,l:"seg"}].map(({v,l},i)=>(
-              <div key={l} style={{display:"flex",flexDirection:"column",alignItems:"center"}}>
-                <div style={{background:C.surface,border:`1px solid ${C.edge}`,borderRadius:6,padding:"8px 14px",minWidth:58,textAlign:"center"}}>
-                  <span style={{fontFamily:fd,fontSize:32,color:i===0?C.rose:C.snow,lineHeight:1}}>{String(v).padStart(2,"0")}</span>
+        <div style={{maxWidth:1080,margin:"0 auto",display:"grid",gridTemplateColumns:"1fr 1fr",gap:60,alignItems:"center",position:"relative",zIndex:1}}>
+          <div>
+            <div style={{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.15)",borderRadius:100,padding:"5px 16px",marginBottom:24}}>
+              <span style={{width:7,height:7,borderRadius:"50%",background:"#86EFAC",display:"inline-block",animation:"pulse 1.5s infinite"}}/>
+              <span style={{color:"rgba(255,255,255,.85)",fontSize:12,fontWeight:600}}>Plataforma de aprovação ENEM 2026</span>
+            </div>
+            <h1 style={{fontFamily:fd,fontSize:64,lineHeight:1.05,color:"#fff",marginBottom:20,fontWeight:900}}>
+              Estude mais.<br/>Evolua sempre.<br/><span style={{color:"#86EFAC"}}>Passe no ENEM.</span>
+            </h1>
+            <p style={{color:"rgba(255,255,255,.7)",fontSize:16,lineHeight:1.8,marginBottom:28,maxWidth:420,fontWeight:300}}>
+              Exercícios reais, sistema de progresso gamificado e estratégias comprovadas. Tudo que você precisa em um só lugar.
+            </p>
+
+            {/* Countdown */}
+            <div style={{display:"flex",gap:8,marginBottom:32,alignItems:"flex-end"}}>
+              {[{v:count.d,l:"dias"},{v:count.h,l:"horas"},{v:count.m,l:"min"},{v:count.s,l:"seg"}].map(({v,l},i)=>(
+                <div key={l} style={{textAlign:"center"}}>
+                  <div style={{background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.15)",borderRadius:10,padding:"10px 14px",minWidth:62,backdropFilter:"blur(8px)"}}>
+                    <span style={{fontFamily:fd,fontSize:30,color:i===0?"#FCA5A5":"#fff",lineHeight:1,fontWeight:900}}>{String(v).padStart(2,"0")}</span>
+                  </div>
+                  <p style={{color:"rgba(255,255,255,.5)",fontSize:10,marginTop:5,letterSpacing:1,textTransform:"uppercase"}}>{l}</p>
                 </div>
-                <span style={{color:C.ash,fontSize:9,marginTop:4,letterSpacing:1,textTransform:"uppercase"}}>{l}</span>
+              ))}
+            </div>
+
+            <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+              <button onClick={()=>setModal("register")} style={{background:"#fff",border:"none",color:C.g800,padding:"14px 28px",borderRadius:8,cursor:"pointer",fontFamily:ff,fontWeight:800,fontSize:15,boxShadow:"0 4px 20px rgba(0,0,0,.2)",transition:"all .2s"}}>
+                Começar agora — é grátis
+              </button>
+              <button onClick={()=>go("exercises")} style={{background:"transparent",border:"2px solid rgba(255,255,255,.3)",color:"rgba(255,255,255,.9)",padding:"14px 22px",borderRadius:8,cursor:"pointer",fontFamily:ff,fontWeight:600,fontSize:14,transition:"all .2s"}}>
+                Ver exercícios →
+              </button>
+            </div>
+
+            <div style={{display:"flex",gap:20,marginTop:24,flexWrap:"wrap"}}>
+              {["✓ Garantia de 7 dias","✓ 12.000+ aprovados","✓ 4.9★ de avaliação"].map(t=>(
+                <span key={t} style={{color:"rgba(255,255,255,.55)",fontSize:12,fontWeight:500}}>{t}</span>
+              ))}
+            </div>
+          </div>
+
+          {/* Card preview */}
+          <div style={{background:"#fff",borderRadius:20,padding:24,boxShadow:"0 24px 64px rgba(0,0,0,.2)"}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:18,paddingBottom:16,borderBottom:`1px solid ${C.n100}`}}>
+              <div style={{width:42,height:42,borderRadius:10,background:`linear-gradient(135deg,${C.g600},${C.g800})`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:fd,fontSize:18,color:"#fff",fontWeight:900}}>A</div>
+              <div style={{flex:1}}>
+                <p style={{fontWeight:700,fontSize:14,color:C.n900}}>Ana Carolina</p>
+                <p style={{color:C.n500,fontSize:12}}>Nível 9 · 4.820 XP</p>
               </div>
-            ))}
-          </div>
+              <span style={{fontSize:18}}>🏆</span>
+            </div>
 
-          <div style={{display:"flex",gap:10}}>
-            <button onClick={()=>setModal("register")} style={{background:C.lime,border:"none",color:"#000",padding:"13px 28px",borderRadius:6,cursor:"pointer",fontFamily:ff,fontWeight:800,fontSize:15}}>
-              Criar conta grátis
-            </button>
-            <button onClick={()=>go("exercises")} style={{background:"transparent",border:`1px solid ${C.edge}`,color:C.ash,padding:"13px 20px",borderRadius:6,cursor:"pointer",fontFamily:ff,fontWeight:500,fontSize:14}}>
-              Ver exercícios →
-            </button>
-          </div>
-
-          <div style={{display:"flex",gap:24,marginTop:28}}>
-            {["12.000+ aprovados","4.9 / 5 avaliação","Garantia de 7 dias"].map(t=>(
-              <span key={t} style={{color:C.ash,fontSize:12,display:"flex",alignItems:"center",gap:5}}>
-                <span style={{color:C.lime,fontSize:10}}>✓</span>{t}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Dashboard preview */}
-        <div style={{background:C.surface,border:`1px solid ${C.edge}`,borderRadius:16,padding:0,overflow:"hidden"}}>
-          {/* Terminal header */}
-          <div style={{background:C.ink,borderBottom:`1px solid ${C.edge}`,padding:"10px 16px",display:"flex",alignItems:"center",gap:6}}>
-            <span style={{width:10,height:10,borderRadius:"50%",background:"#FF5F57",display:"inline-block"}}/>
-            <span style={{width:10,height:10,borderRadius:"50%",background:"#FEBC2E",display:"inline-block"}}/>
-            <span style={{width:10,height:10,borderRadius:"50%",background:"#28C840",display:"inline-block"}}/>
-            <span style={{color:C.ash,fontSize:11,marginLeft:8,fontFamily:"monospace"}}>dashboard · Ana Carolina</span>
-          </div>
-          <div style={{padding:20}}>
-            {/* Level bar */}
             <div style={{marginBottom:16}}>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
-                <span style={{fontSize:11,color:C.ash,fontWeight:600,letterSpacing:1}}>NÍV. 9 — VETERANO</span>
-                <span style={{fontSize:11,color:C.lime,fontWeight:700}}>82%</span>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                <span style={{fontSize:12,color:C.n500,fontWeight:600}}>Progresso — Nível 9 → 10</span>
+                <span style={{fontSize:12,fontWeight:700,color:C.g600}}>82%</span>
               </div>
-              <div style={{height:3,background:C.edge,borderRadius:2}}>
-                <div style={{height:"100%",width:"82%",background:C.lime,borderRadius:2,boxShadow:`0 0 8px ${C.lime}`}}/>
+              <div style={{height:8,background:C.n100,borderRadius:4,overflow:"hidden"}}>
+                <div style={{height:"100%",width:"82%",background:`linear-gradient(90deg,${C.g600},${C.g400})`,borderRadius:4}}/>
               </div>
             </div>
+
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
-              {[{l:"STREAK",v:"45d",c:C.rose},{l:"XP TOTAL",v:"4.820",c:C.lime},{l:"COINS",v:"340",c:C.amber}].map(({l,v,c})=>(
-                <div key={l} style={{background:C.ink,border:`1px solid ${C.edge}`,borderRadius:8,padding:"10px 8px",textAlign:"center"}}>
-                  <p style={{color:C.ash,fontSize:9,letterSpacing:1,marginBottom:4}}>{l}</p>
-                  <p style={{fontFamily:fd,fontSize:22,color:c,lineHeight:1}}>{v}</p>
+              {[{l:"Streak",v:"45d",c:C.rose},{l:"XP Total",v:"4.820",c:C.g700},{l:"Créditos",v:"7.500",c:C.amber}].map(({l,v,c})=>(
+                <div key={l} style={{background:C.g50,border:`1px solid ${C.n100}`,borderRadius:10,padding:"10px 8px",textAlign:"center"}}>
+                  <p style={{color:C.n500,fontSize:10,fontWeight:600,marginBottom:3}}>{l}</p>
+                  <p style={{fontFamily:fd,fontSize:20,color:c,fontWeight:900}}>{v}</p>
                 </div>
               ))}
             </div>
-            <div style={{background:C.ink,border:`1px solid ${C.edge}`,borderRadius:8,padding:12,marginBottom:10}}>
-              <p style={{color:C.ash,fontSize:9,letterSpacing:1,marginBottom:8}}>MISSÕES DE HOJE</p>
-              {[{t:"10 questões respondidas",xp:50,done:true},{t:"Sessão Pomodoro (25min)",xp:40,done:false}].map((m,i)=>(
+
+            <div style={{background:C.g50,border:`1px solid ${C.n100}`,borderRadius:10,padding:12}}>
+              <p style={{color:C.n500,fontSize:10,fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>Missões de hoje</p>
+              {[{t:"10 questões respondidas",xp:50,done:true},{t:"Sessão Pomodoro 25min",xp:40,done:false}].map((m,i)=>(
                 <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:i===0?6:0}}>
-                  <span style={{fontSize:12,color:m.done?C.lime:C.snow,textDecoration:m.done?"line-through":"none",fontWeight:m.done?400:500}}>{m.t}</span>
-                  <span style={{fontSize:11,color:C.amber,fontWeight:700}}>+{m.xp}</span>
+                  <span style={{fontSize:12,color:m.done?C.g600:C.n700,textDecoration:m.done?"line-through":"none"}}>{m.t}</span>
+                  <span style={{fontSize:11,color:C.amber,fontWeight:700}}>+{m.xp} XP</span>
                 </div>
               ))}
             </div>
-            <div style={{background:"rgba(129,140,248,.07)",border:"1px solid rgba(129,140,248,.2)",borderRadius:8,padding:"9px 12px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <span style={{color:C.violet,fontSize:12,fontWeight:600}}>Roleta disponível hoje</span>
-              <span style={{background:C.violet,color:"#fff",fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:4}}>Girar</span>
-            </div>
           </div>
         </div>
       </section>
 
-      {/* ── DIVIDER ───────────────────────────────────────────── */}
-      <div style={{borderTop:`1px solid ${C.edge}`,borderBottom:`1px solid ${C.edge}`,padding:"14px 28px",background:C.ink}}>
-        <div style={{maxWidth:1080,margin:"0 auto",display:"flex",justifyContent:"space-around",flexWrap:"wrap",gap:16}}>
-          {[["12.000+","Alunos aprovados"],["4.9★","Avaliação"],["5.000+","Questões no banco"],["87%","Aprovação em federal"]].map(([n,l])=>(
+      {/* STATS BAR */}
+      <section style={{background:C.white,borderBottom:`1px solid ${C.n100}`,padding:"16px 28px"}}>
+        <div style={{maxWidth:1080,margin:"0 auto",display:"flex",justifyContent:"center",gap:48,flexWrap:"wrap"}}>
+          {[["12.000+","Aprovados"],["4.9★","Avaliação"],["5.000+","Questões"],["87%","Aprovação em federal"]].map(([n,l])=>(
             <div key={l} style={{textAlign:"center"}}>
-              <p style={{fontFamily:fd,fontSize:26,color:C.lime,lineHeight:1}}>{n}</p>
-              <p style={{color:C.ash,fontSize:11,marginTop:3,letterSpacing:.5}}>{l}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── FEATURES ──────────────────────────────────────────── */}
-      <section style={{maxWidth:1080,margin:"0 auto",padding:"72px 28px"}}>
-        <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",marginBottom:48}}>
-          <h2 style={{fontFamily:fd,fontSize:56,lineHeight:.95}}>
-            POR QUE O<br/><span style={{color:C.lime}}>ENEMPRO?</span>
-          </h2>
-          <p style={{color:C.ash,fontSize:14,maxWidth:280,textAlign:"right",lineHeight:1.7}}>Mais do que questões. Uma plataforma de progressão real — como os melhores apps de idiomas, mas para o ENEM.</p>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:1,background:C.edge,border:`1px solid ${C.edge}`,borderRadius:12,overflow:"hidden"}}>
-          {[
-            {n:"01",title:"Streak diário",desc:"Mantenha sua sequência e ganhe XP, coins e recompensas a cada dia de estudo sem quebrar."},
-            {n:"02",title:"XP e Níveis",desc:"Suba de nível respondendo questões. Seu progresso é visível, mensurável e motivador."},
-            {n:"03",title:"Missões",desc:"Desafios diários e semanais com recompensas reais — mantendo o foco sem depender de força de vontade."},
-            {n:"04",title:"Roleta de prêmios",desc:"Gire após manter o streak e ganhe XP dobrado, coins, escudos ou até acesso premium temporário."},
-            {n:"05",title:"Ranking nacional",desc:"Compete com alunos de todo o Brasil. Veja sua posição em tempo real e suba na classificação."},
-            {n:"06",title:"IA Tutor",desc:"Em desenvolvimento: tutor inteligente que explica, tira dúvidas e cria seu plano personalizado.",soon:true},
-          ].map(({n,title,desc,soon})=>(
-            <div key={n} className="hov" style={{background:C.bg,padding:28,transition:"all .2s",opacity:soon?.65:1,cursor:"default"}}>
-              <p style={{fontFamily:fd,fontSize:13,color:soon?C.ash:C.lime,letterSpacing:2,marginBottom:12}}>{n}{soon?" — EM BREVE":""}</p>
-              <h3 style={{fontWeight:700,fontSize:18,marginBottom:10,color:C.snow}}>{title}</h3>
-              <p style={{color:C.ash,fontSize:13,lineHeight:1.75,fontWeight:300}}>{desc}</p>
+              <p style={{fontFamily:fd,fontSize:24,color:C.g700,fontWeight:900,lineHeight:1}}>{n}</p>
+              <p style={{color:C.n500,fontSize:11,marginTop:3,fontWeight:500}}>{l}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ── PRICING ───────────────────────────────────────────── */}
-      <section style={{background:C.ink,borderTop:`1px solid ${C.edge}`,borderBottom:`1px solid ${C.edge}`,padding:"72px 28px"}}>
-        <div style={{maxWidth:1080,margin:"0 auto"}}>
-          <div style={{marginBottom:48}}>
-            <p style={{color:C.lime,fontSize:11,fontWeight:700,letterSpacing:3,textTransform:"uppercase",marginBottom:10}}>Planos e preços</p>
-            <h2 style={{fontFamily:fd,fontSize:56}}>INVISTA NO <span style={{color:C.lime}}>FUTURO.</span></h2>
-            <p style={{color:C.ash,fontSize:14,marginTop:8}}>Garantia incondicional de 7 dias. Cancele os mensais quando quiser.</p>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,alignItems:"start"}}>
-            {PLANS.map(pl=>(
-              <div key={pl.id} style={{background:pl.hi?"#0E1A0E":C.bg,border:`1px solid ${pl.hi?C.lime:C.edge}`,borderRadius:10,padding:22,position:"relative",boxShadow:pl.hi?`0 0 24px ${C.limeFade}`:""}} className="hov">
-                {pl.hi&&<div style={{position:"absolute",top:-1,left:0,right:0,height:2,background:C.lime,borderRadius:"10px 10px 0 0"}}/>}
-                <p style={{color:C.ash,fontSize:10,fontWeight:700,letterSpacing:2,textTransform:"uppercase",marginBottom:4}}>{pl.sub}</p>
-                <p style={{fontFamily:fd,fontSize:14,color:pl.hi?C.lime:C.ash,letterSpacing:2,textTransform:"uppercase",marginBottom:12}}>{pl.label}</p>
-                <div style={{marginBottom:6}}>
-                  <span style={{fontFamily:fd,fontSize:46,color:C.snow}}>{pl.price===0?"Grátis":`R$${pl.price}`}</span>
-                  {pl.period&&<span style={{color:C.ash,fontSize:12}}>{pl.period}</span>}
+      {/* CRÉDITOS */}
+      <section style={{maxWidth:1080,margin:"0 auto",padding:"64px 28px"}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:48,alignItems:"center"}}>
+          <div>
+            <span style={{background:C.g100,color:C.g700,fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:100,textTransform:"uppercase",letterSpacing:1}}>Sistema de créditos</span>
+            <h2 style={{fontFamily:fd,fontSize:42,color:C.g900,marginTop:12,marginBottom:16,lineHeight:1.15}}>Estude no seu ritmo, com limites inteligentes</h2>
+            <p style={{color:C.n500,fontSize:15,lineHeight:1.8,marginBottom:20,fontWeight:300}}>
+              Cada nova conta começa com <strong style={{color:C.g700}}>10.000 créditos</strong>. Cada exercício custa <strong style={{color:C.g700}}>2.500 créditos</strong>. Quando acabar, faça upgrade para créditos ilimitados.
+            </p>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {[["10.000","Créditos iniciais gratuitos","Começe sem pagar nada"],["2.500","Créditos por exercício","Cada questão respondida"],["Ilimitado","Nos planos pagos","Pro, Premium ou Vitalício"]].map(([v,t,s])=>(
+                <div key={t} style={{display:"flex",gap:14,alignItems:"center",background:C.white,border:`1px solid ${C.n100}`,borderRadius:10,padding:"12px 16px"}}>
+                  <div style={{fontFamily:fd,fontSize:18,color:C.g700,fontWeight:900,minWidth:80}}>{v}</div>
+                  <div>
+                    <p style={{fontWeight:600,fontSize:13,color:C.n900}}>{t}</p>
+                    <p style={{color:C.n500,fontSize:12}}>{s}</p>
+                  </div>
                 </div>
-                <p style={{color:C.fog,fontSize:11,marginBottom:18}}>{pl.id==="free"?"Inclui anúncios":pl.id==="vitalicio"?"Pagamento único":"Cancele quando quiser"}</p>
+              ))}
+            </div>
+          </div>
+          <div style={{background:`linear-gradient(135deg,${C.g50},${C.white})`,border:`1px solid ${C.n100}`,borderRadius:20,padding:32,textAlign:"center"}}>
+            <div style={{width:80,height:80,background:`linear-gradient(135deg,${C.g600},${C.g800})`,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",fontSize:32}}>⚡</div>
+            <p style={{fontFamily:fd,fontSize:48,color:C.g700,fontWeight:900,lineHeight:1}}>10.000</p>
+            <p style={{color:C.n500,fontSize:13,marginTop:4,marginBottom:20}}>créditos para começar hoje</p>
+            <button onClick={()=>setModal("register")} className="btn-green" style={{width:"100%",padding:"13px"}}>
+              Criar conta e começar →
+            </button>
+            <p style={{color:C.n300,fontSize:11,marginTop:10}}>Sem cartão de crédito · Grátis para sempre no básico</p>
+          </div>
+        </div>
+      </section>
+
+      {/* FEATURES */}
+      <section style={{background:C.white,padding:"64px 28px",borderTop:`1px solid ${C.n100}`,borderBottom:`1px solid ${C.n100}`}}>
+        <div style={{maxWidth:1080,margin:"0 auto"}}>
+          <div style={{textAlign:"center",marginBottom:48}}>
+            <span style={{background:C.g100,color:C.g700,fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:100,textTransform:"uppercase",letterSpacing:1}}>Funcionalidades</span>
+            <h2 style={{fontFamily:fd,fontSize:42,color:C.g900,marginTop:12,marginBottom:10,fontWeight:900}}>Tudo que você precisa para passar</h2>
+            <p style={{color:C.n500,fontSize:15,maxWidth:500,margin:"0 auto",fontWeight:300}}>Uma plataforma completa, do primeiro exercício até a aprovação</p>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:20}}>
+            {[
+              {icon:"📚",title:"Banco de Questões",desc:"Mais de 5.000 questões reais do ENEM organizadas por área, ano e dificuldade."},
+              {icon:"🔥",title:"Streak Diário",desc:"Mantenha sua sequência e ganhe XP e créditos extras a cada dia de estudo."},
+              {icon:"⚡",title:"Sistema de XP",desc:"Suba de nível respondendo questões. Seu progresso é visível e motivador."},
+              {icon:"🎯",title:"Missões",desc:"Desafios diários e semanais com recompensas reais para manter o foco."},
+              {icon:"🏆",title:"Ranking Nacional",desc:"Compete com alunos de todo o Brasil e veja sua posição em tempo real."},
+              {icon:"🤖",title:"IA Tutor",desc:"Em breve: tutor que explica, tira dúvidas e cria seu plano personalizado.",soon:true},
+            ].map(({icon,title,desc,soon})=>(
+              <div key={title} className="card" style={{padding:22,opacity:soon?.7:1}}>
+                {soon&&<span style={{float:"right",background:C.amberL,color:C.amber,fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:100}}>Em breve</span>}
+                <div style={{width:44,height:44,background:C.g50,border:`1px solid ${C.n100}`,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,marginBottom:14}}>{icon}</div>
+                <h3 style={{fontWeight:700,fontSize:15,marginBottom:8,color:C.n900}}>{title}</h3>
+                <p style={{color:C.n500,fontSize:13,lineHeight:1.75,fontWeight:300}}>{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* PRICING */}
+      <section style={{padding:"64px 28px",background:C.g50}}>
+        <div style={{maxWidth:1080,margin:"0 auto"}}>
+          <div style={{textAlign:"center",marginBottom:40}}>
+            <span style={{background:C.g100,color:C.g700,fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:100,textTransform:"uppercase",letterSpacing:1}}>Planos</span>
+            <h2 style={{fontFamily:fd,fontSize:42,color:C.g900,marginTop:12,marginBottom:8,fontWeight:900}}>Invista no seu futuro</h2>
+            <p style={{color:C.n500,fontSize:15,fontWeight:300}}>Créditos ilimitados em todos os planos pagos. Garantia de 7 dias.</p>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16,alignItems:"start"}}>
+            {PLANS.map(pl=>(
+              <div key={pl.id} className="card" style={{padding:26,position:"relative",border:pl.hi?`2px solid ${C.g600}`:`1px solid ${C.n100}`,background:pl.hi?C.white:C.white,boxShadow:pl.hi?"0 8px 40px rgba(30,122,44,.15)":""}}>
+                {pl.hi&&<div style={{position:"absolute",top:-14,left:"50%",transform:"translateX(-50%)",background:C.g700,color:"#fff",borderRadius:100,padding:"4px 14px",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>⭐ Mais popular</div>}
+                {pl.hi&&<div style={{position:"absolute",top:0,left:0,right:0,height:3,background:`linear-gradient(90deg,${C.g600},${C.g400})`,borderRadius:"16px 16px 0 0"}}/>}
+                <p style={{color:C.n500,fontSize:11,fontWeight:700,letterSpacing:2,textTransform:"uppercase",marginBottom:6,marginTop:pl.hi?8:0}}>{pl.label}</p>
+                <div style={{marginBottom:6}}>
+                  <span style={{fontFamily:fd,fontSize:48,color:C.g900,fontWeight:900}}>R${pl.price}</span>
+                  <span style={{color:C.n500,fontSize:13}}>{pl.period}</span>
+                </div>
+                <div style={{background:C.g50,border:`1px solid ${C.n100}`,borderRadius:8,padding:"6px 10px",marginBottom:16,display:"inline-flex",alignItems:"center",gap:6}}>
+                  <span style={{color:C.g600,fontWeight:700,fontSize:12}}>⚡ Créditos: {pl.credits}</span>
+                </div>
                 <ul style={{listStyle:"none",marginBottom:22}}>
                   {pl.items.map(i=>(
-                    <li key={i} style={{fontSize:12,color:C.ash,marginBottom:7,display:"flex",gap:6,alignItems:"flex-start"}}>
-                      <span style={{color:C.lime,fontWeight:700,flexShrink:0}}>↳</span>{i}
+                    <li key={i} style={{fontSize:13,color:C.n700,marginBottom:8,display:"flex",gap:8,alignItems:"flex-start",fontWeight:400}}>
+                      <span style={{color:C.g600,fontWeight:700,flexShrink:0,marginTop:1}}>✓</span>{i}
                     </li>
                   ))}
                 </ul>
-                <button onClick={()=>pl.price===0?null:openCheckout(pl)} style={{width:"100%",padding:"11px",borderRadius:6,border:`1px solid ${pl.hi?C.lime:C.edge}`,background:pl.hi?C.lime:"transparent",color:pl.hi?"#000":C.ash,fontFamily:ff,fontWeight:700,fontSize:13,cursor:"pointer"}}>
-                  {pl.cta}
+                <button onClick={()=>openCheckout(pl)} className={pl.hi?"btn-green":"btn-outline"} style={{width:"100%",padding:"12px"}}>
+                  {pl.cta} →
                 </button>
               </div>
             ))}
@@ -354,153 +424,207 @@ function Landing({days,go,setModal,openCheckout}){
         </div>
       </section>
 
-      {/* ── CTA ───────────────────────────────────────────────── */}
-      <section style={{maxWidth:1080,margin:"0 auto",padding:"80px 28px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:32}}>
-        <div>
-          <h2 style={{fontFamily:fd,fontSize:64,lineHeight:.95,marginBottom:16}}>
-            COMECE<br/><span style={{color:C.lime}}>HOJE.</span>
-          </h2>
-          <p style={{color:C.ash,fontSize:15,lineHeight:1.7}}>{days} dias para o ENEM.<br/>Seus concorrentes já estão estudando.</p>
-        </div>
-        <button onClick={()=>setModal("register")} style={{background:C.lime,border:"none",color:"#000",padding:"16px 40px",borderRadius:6,cursor:"pointer",fontFamily:ff,fontWeight:800,fontSize:18,flexShrink:0}}>
+      {/* CTA FINAL */}
+      <section style={{background:`linear-gradient(135deg,${C.g900},${C.g800})`,padding:"72px 28px",textAlign:"center"}}>
+        <p style={{color:"rgba(255,255,255,.6)",fontSize:13,marginBottom:12,fontWeight:500}}>⏰ Faltam {days} dias para o ENEM 2026</p>
+        <h2 style={{fontFamily:fd,fontSize:56,color:"#fff",marginBottom:16,fontWeight:900}}>Comece hoje.<br/><span style={{color:"#86EFAC"}}>Passe este ano.</span></h2>
+        <button onClick={()=>setModal("register")} style={{background:"#fff",border:"none",color:C.g800,padding:"15px 36px",borderRadius:8,cursor:"pointer",fontFamily:ff,fontWeight:800,fontSize:16,boxShadow:"0 6px 24px rgba(0,0,0,.2)"}}>
           Criar conta grátis →
         </button>
+        <div style={{display:"flex",justifyContent:"center",gap:24,marginTop:20,flexWrap:"wrap"}}>
+          {["✓ 10.000 créditos gratuitos","✓ Sem cartão de crédito","✓ Garantia de 7 dias"].map(t=>(
+            <span key={t} style={{color:"rgba(255,255,255,.5)",fontSize:12}}>{t}</span>
+          ))}
+        </div>
       </section>
 
-      <footer style={{borderTop:`1px solid ${C.edge}`,padding:"18px 28px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
-        <span style={{fontFamily:fd,fontSize:16,letterSpacing:3,color:C.fog}}>ENEMPRO</span>
-        <span style={{color:C.fog,fontSize:11}}>© 2026 ENEMPro · CNPJ 00.000.000/0001-00 · Garantia de 7 dias</span>
+      <footer style={{background:C.g900,borderTop:`1px solid rgba(255,255,255,.05)`,padding:"18px 28px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <div style={{width:24,height:24,background:C.g600,borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <span style={{fontFamily:fd,fontSize:13,color:"#fff",fontWeight:900}}>E</span>
+          </div>
+          <span style={{fontFamily:fd,fontSize:14,color:"rgba(255,255,255,.4)",letterSpacing:1}}>ENEMPro</span>
+        </div>
+        <span style={{color:"rgba(255,255,255,.25)",fontSize:11}}>© 2026 ENEMPro · enempro.com.br · Garantia de 7 dias</span>
       </footer>
-    </main>
+    </div>
   );
 }
 
-/* ─── AUTH MODAL ─────────────────────────────────────────────────── */
+// ── AUTH MODAL ────────────────────────────────────────────────────
 function AuthModal({mode,onClose,onSwitch,onSuccess}){
   const [name,setName]=useState(""),[ email,setEmail]=useState(""),[ pass,setPass]=useState("");
-  const inp={width:"100%",background:C.surface,border:`1px solid ${C.edge}`,borderRadius:6,padding:"11px 14px",color:C.snow,fontFamily:ff,fontSize:14,marginBottom:10};
+  const inp={width:"100%",background:C.g50,border:`1.5px solid ${C.n100}`,borderRadius:8,padding:"11px 14px",color:C.n900,fontFamily:ff,fontSize:14,marginBottom:12};
   return(
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.88)",backdropFilter:"blur(12px)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onClose}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.ink,border:`1px solid ${C.edge}`,borderRadius:12,padding:32,width:"100%",maxWidth:380}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
-          <h2 style={{fontFamily:fd,fontSize:28,letterSpacing:2}}>{mode==="login"?"ENTRAR":"CRIAR CONTA"}</h2>
-          <button onClick={onClose} style={{background:"transparent",border:"none",color:C.ash,cursor:"pointer",fontSize:18,lineHeight:1}}>✕</button>
+    <div style={{position:"fixed",inset:0,background:"rgba(20,64,26,.6)",backdropFilter:"blur(8px)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#fff",border:`1px solid ${C.n100}`,borderRadius:20,padding:36,width:"100%",maxWidth:400,boxShadow:"0 24px 64px rgba(0,0,0,.15)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:22}}>
+          <div style={{width:34,height:34,background:`linear-gradient(135deg,${C.g700},${C.g500})`,borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <span style={{fontFamily:fd,fontSize:18,color:"#fff",fontWeight:900}}>E</span>
+          </div>
+          <div style={{flex:1}}>
+            <h2 style={{fontFamily:fd,fontSize:22,color:C.g900,fontWeight:900}}>{mode==="login"?"Bem-vindo de volta":"Criar conta grátis"}</h2>
+          </div>
+          <button onClick={onClose} style={{background:"transparent",border:"none",color:C.n500,cursor:"pointer",fontSize:18,lineHeight:1}}>✕</button>
         </div>
-        {mode==="register"&&<input style={inp} placeholder="Seu nome" value={name} onChange={e=>setName(e.target.value)}/>}
+        {mode==="register"&&<input style={inp} placeholder="Seu nome completo" value={name} onChange={e=>setName(e.target.value)}/>}
         <input style={inp} type="email" placeholder="E-mail" value={email} onChange={e=>setEmail(e.target.value)}/>
         <input style={{...inp,marginBottom:16}} type="password" placeholder="Senha" value={pass} onChange={e=>setPass(e.target.value)}/>
-        <button onClick={()=>onSuccess(name||email.split("@")[0]||"Aluno",email)} style={{width:"100%",background:C.lime,border:"none",color:"#000",padding:"12px",borderRadius:6,cursor:"pointer",fontFamily:ff,fontWeight:800,fontSize:15,marginBottom:10}}>
-          {mode==="login"?"Entrar":"Criar conta grátis"}
+        <button onClick={()=>onSuccess(name||email.split("@")[0]||"Aluno",email)} className="btn-green" style={{width:"100%",padding:"13px",fontSize:15}}>
+          {mode==="login"?"Entrar na conta":"Criar conta e ganhar 10.000 créditos"}
         </button>
-        <p style={{color:C.ash,fontSize:12,textAlign:"center",lineHeight:1.6}}>
+        {mode==="register"&&(
+          <div style={{background:C.g50,border:`1px solid ${C.n100}`,borderRadius:8,padding:"10px 14px",marginTop:12,textAlign:"center"}}>
+            <p style={{color:C.g700,fontSize:12,fontWeight:600}}>⚡ 10.000 créditos gratuitos ao criar conta · Garantia de 7 dias</p>
+          </div>
+        )}
+        <p style={{color:C.n500,fontSize:13,textAlign:"center",marginTop:16}}>
           {mode==="login"?"Não tem conta? ":"Já tem conta? "}
-          <span onClick={()=>onSwitch(mode==="login"?"register":"login")} style={{color:C.lime,cursor:"pointer",fontWeight:700}}>
-            {mode==="login"?"Criar conta":"Entrar"}
+          <span onClick={()=>onSwitch(mode==="login"?"register":"login")} style={{color:C.g700,cursor:"pointer",fontWeight:700}}>
+            {mode==="login"?"Criar grátis":"Entrar"}
           </span>
         </p>
-        <p style={{color:C.fog,fontSize:11,textAlign:"center",marginTop:14}}>Garantia de 7 dias · Dados criptografados</p>
       </div>
     </div>
   );
 }
 
-/* ─── DASHBOARD ──────────────────────────────────────────────────── */
+// ── CREDIT MODAL ──────────────────────────────────────────────────
+function CreditModal({onClose,openCheckout,setCreditModal}){
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(20,64,26,.7)",backdropFilter:"blur(10px)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#fff",border:`1px solid ${C.n100}`,borderRadius:20,padding:36,width:"100%",maxWidth:420,textAlign:"center",boxShadow:"0 24px 64px rgba(0,0,0,.15)"}}>
+        <div style={{width:72,height:72,background:C.roseL,border:`2px solid ${C.rose}`,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",fontSize:32,animation:"shake .4s ease"}}>⚡</div>
+        <h2 style={{fontFamily:fd,fontSize:28,color:C.g900,marginBottom:8,fontWeight:900}}>Créditos esgotados!</h2>
+        <p style={{color:C.n500,fontSize:14,lineHeight:1.7,marginBottom:24,fontWeight:300}}>
+          Você usou todos os seus créditos gratuitos. Faça upgrade para continuar estudando com créditos <strong style={{color:C.g700}}>ilimitados</strong>.
+        </p>
+        <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:20}}>
+          {PLANS.map(pl=>(
+            <button key={pl.id} onClick={()=>{openCheckout(pl);onClose();}} style={{background:pl.hi?C.g700:C.g50,border:`1.5px solid ${pl.hi?C.g700:C.n100}`,color:pl.hi?"#fff":C.n700,padding:"12px 16px",borderRadius:10,cursor:"pointer",fontFamily:ff,fontWeight:700,fontSize:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span>{pl.label}</span>
+              <span style={{color:pl.hi?"rgba(255,255,255,.8)":C.n500,fontSize:13,fontWeight:500}}>R${pl.price}{pl.period} · créditos ilimitados</span>
+            </button>
+          ))}
+        </div>
+        <button onClick={onClose} style={{background:"transparent",border:"none",color:C.n400,cursor:"pointer",fontFamily:ff,fontSize:13}}>
+          Agora não
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────
 function Dashboard({user,go,openCheckout,lv,openSpin}){
-  const areas=[{l:"Matemática",v:64,c:C.sky},{l:"Linguagens",v:74,c:C.lime},{l:"C. Humanas",v:82,c:C.amber},{l:"C. Natureza",v:58,c:C.rose},{l:"Redação",v:70,c:C.violet}];
+  const areas=[{l:"Matemática",v:64,c:C.sky},{l:"Linguagens",v:74,c:C.g600},{l:"C. Humanas",v:82,c:C.amber},{l:"C. Natureza",v:58,c:C.rose},{l:"Redação",v:70,c:"#7C3AED"}];
   const week=["S","T","Q","Q","S","S","D"];
   const studied=[true,true,true,false,true,true,true];
+  const missions=[
+    {label:"Responder 10 questões",prog:3,total:10,xp:50,done:false},
+    {label:"Manter sequência ativa",prog:1,total:1,xp:25,done:true},
+    {label:"Sessão Pomodoro 25min",prog:0,total:1,xp:40,done:false},
+  ];
+  const credPct=Math.round((user.credits/CREDITS_START)*100);
+
   return(
     <div style={{maxWidth:1080,margin:"0 auto",padding:"32px 28px"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:28,flexWrap:"wrap",gap:12}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:24,flexWrap:"wrap",gap:12}}>
         <div>
-          <p style={{color:C.ash,fontSize:11,letterSpacing:2,textTransform:"uppercase",marginBottom:4}}>Bem-vindo de volta</p>
-          <h1 style={{fontFamily:fd,fontSize:40,color:C.snow}}>{user.name.split(" ")[0].toUpperCase()} <span style={{color:C.lime}}>—</span> NÍV. {lv.level}</h1>
+          <p style={{color:C.n500,fontSize:12,fontWeight:600,marginBottom:4,textTransform:"uppercase",letterSpacing:1}}>Dashboard</p>
+          <h1 style={{fontFamily:fd,fontSize:36,color:C.g900,fontWeight:900}}>Olá, {user.name.split(" ")[0]}! <span style={{color:C.g600}}>Nível {lv.level}</span></h1>
         </div>
-        <button onClick={openSpin} style={{background:"transparent",border:`1px solid ${C.violet}`,color:C.violet,padding:"9px 20px",borderRadius:6,cursor:"pointer",fontFamily:ff,fontWeight:700,fontSize:13}}>
-          Girar roleta →
-        </button>
+        <button onClick={openSpin} className="btn-outline" style={{padding:"9px 18px"}}>Girar roleta 🎰</button>
       </div>
 
       {/* XP bar */}
-      <div style={{background:C.surface,border:`1px solid ${C.edge}`,borderRadius:8,padding:"14px 18px",marginBottom:16}}>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}>
-          <span style={{color:C.ash,fontSize:10,fontWeight:700,letterSpacing:2}}>PROGRESSO — NÍV. {lv.level} → {lv.level+1}</span>
-          <span style={{color:C.lime,fontSize:11,fontWeight:700}}>{user.xp} / {lv.nextXp} XP</span>
+      <div className="card" style={{padding:"16px 20px",marginBottom:16}}>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+          <span style={{color:C.n500,fontSize:12,fontWeight:600}}>⚡ Nível {lv.level} → {lv.level+1}</span>
+          <span style={{color:C.g700,fontSize:12,fontWeight:700}}>{user.xp.toLocaleString()} / {lv.nextXp.toLocaleString()} XP</span>
         </div>
-        <div style={{height:4,background:C.edge,borderRadius:2,overflow:"hidden"}}>
-          <div style={{height:"100%",width:`${lv.pct}%`,background:C.lime,borderRadius:2,boxShadow:`0 0 8px ${C.lime}`,transition:"width .6s"}}/>
+        <div style={{height:8,background:C.n100,borderRadius:4,overflow:"hidden"}}>
+          <div style={{height:"100%",width:`${lv.pct}%`,background:`linear-gradient(90deg,${C.g600},${C.g400})`,borderRadius:4,transition:"width .6s"}}/>
         </div>
       </div>
 
+      {/* Créditos */}
+      <div className="card" style={{padding:"16px 20px",marginBottom:16,border:`1px solid ${user.credits<2500?C.rose:C.n100}`,background:user.credits<2500?"#FFF5F5":C.white}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <span style={{color:user.credits<2500?C.rose:C.n500,fontSize:12,fontWeight:700}}>⚡ CRÉDITOS {user.credits<2500?"— ATENÇÃO: baixo!":""}</span>
+          <span style={{color:user.credits<2500?C.rose:C.g700,fontSize:13,fontWeight:700}}>{user.credits.toLocaleString()} / {CREDITS_START.toLocaleString()}</span>
+        </div>
+        <div style={{height:8,background:C.n100,borderRadius:4,overflow:"hidden",marginBottom:user.credits<2500?10:0}}>
+          <div style={{height:"100%",width:`${credPct}%`,background:user.credits<2500?`linear-gradient(90deg,${C.rose},#FCA5A5)`:`linear-gradient(90deg,${C.g600},${C.g400})`,borderRadius:4}}/>
+        </div>
+        {user.credits<2500&&(
+          <button onClick={()=>openCheckout(PLANS[1])} className="btn-green" style={{width:"100%",padding:"9px",fontSize:13}}>
+            Fazer upgrade — créditos ilimitados →
+          </button>
+        )}
+      </div>
+
       {/* Stats */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16}}>
-        {[{l:"NOTA ESTIMADA",v:"680",s:"pontos",c:C.lime},{l:"STREAK",v:`${user.streak}d`,s:"dias seguidos",c:C.rose},{l:"XP TOTAL",v:user.xp.toLocaleString(),s:"experiência",c:C.lime},{l:"COINS",v:user.coins,s:"moedas",c:C.amber}].map(({l,v,s,c})=>(
-          <div key={l} style={{background:C.surface,border:`1px solid ${C.edge}`,borderRadius:8,padding:"14px 16px"}}>
-            <p style={{color:C.ash,fontSize:9,fontWeight:700,letterSpacing:2,marginBottom:6}}>{l}</p>
-            <p style={{fontFamily:fd,fontSize:36,color:c,lineHeight:1}}>{v}</p>
-            <p style={{color:C.fog,fontSize:10,marginTop:3}}>{s}</p>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:16}}>
+        {[{l:"Nota Estimada",v:"680",s:"pontos",c:C.g700},{l:"Streak",v:`${user.streak}d`,s:"dias seguidos",c:C.rose},{l:"XP Total",v:user.xp.toLocaleString(),s:"experiência",c:C.g600},{l:"Coins",v:user.coins,s:"moedas",c:C.amber}].map(({l,v,s,c})=>(
+          <div key={l} className="card" style={{padding:"16px"}}>
+            <p style={{color:C.n500,fontSize:11,fontWeight:600,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>{l}</p>
+            <p style={{fontFamily:fd,fontSize:34,color:c,lineHeight:1,fontWeight:900}}>{v}</p>
+            <p style={{color:C.n400,fontSize:10,marginTop:3}}>{s}</p>
           </div>
         ))}
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"1.1fr 1fr",gap:12,marginBottom:12}}>
-        {/* Missões */}
-        <div style={{background:C.surface,border:`1px solid ${C.edge}`,borderRadius:8,padding:18}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-            <p style={{fontSize:11,fontWeight:700,letterSpacing:2,color:C.ash}}>MISSÕES DE HOJE</p>
-            <span style={{background:C.limeFade,color:C.lime,fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:3,border:`1px solid rgba(57,255,20,.2)`}}>1/3 feitas</span>
+      <div style={{display:"grid",gridTemplateColumns:"1.1fr 1fr",gap:14,marginBottom:14}}>
+        <div className="card" style={{padding:20}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+            <h3 style={{fontWeight:700,fontSize:14,color:C.n900}}>Missões de hoje</h3>
+            <span style={{background:C.g100,color:C.g700,fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:100}}>1/3 feitas</span>
           </div>
-          {MISSIONS.map((m,i)=>(
-            <div key={i} style={{background:C.ink,border:`1px solid ${m.done?C.lime:C.edge}`,borderRadius:6,padding:"11px 14px",marginBottom:8}}>
+          {missions.map((m,i)=>(
+            <div key={i} style={{background:C.g50,border:`1px solid ${m.done?C.g400:C.n100}`,borderRadius:8,padding:"11px 14px",marginBottom:8}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:m.done?0:6}}>
-                <span style={{fontSize:13,color:m.done?C.lime:C.snow,fontWeight:m.done?400:600,textDecoration:m.done?"line-through":"none"}}>{m.label}</span>
-                <div style={{display:"flex",gap:8}}>
-                  <span style={{color:C.lime,fontSize:11,fontWeight:700}}>+{m.xp} XP</span>
-                  <span style={{color:C.amber,fontSize:11}}>+{m.coins}◎</span>
-                </div>
+                <span style={{fontSize:13,color:m.done?C.g600:C.n900,fontWeight:600,textDecoration:m.done?"line-through":"none"}}>{m.label}</span>
+                <span style={{color:C.amber,fontSize:11,fontWeight:700}}>+{m.xp} XP</span>
               </div>
               {!m.done&&(
                 <div>
-                  <div style={{height:3,background:C.edge,borderRadius:2}}>
-                    <div style={{height:"100%",width:`${(m.prog/m.total)*100}%`,background:C.lime,borderRadius:2}}/>
+                  <div style={{height:3,background:C.n100,borderRadius:2}}>
+                    <div style={{height:"100%",width:`${(m.prog/m.total)*100}%`,background:C.g500,borderRadius:2}}/>
                   </div>
-                  <p style={{color:C.ash,fontSize:10,marginTop:3}}>{m.prog}/{m.total}</p>
+                  <p style={{color:C.n400,fontSize:10,marginTop:3}}>{m.prog}/{m.total}</p>
                 </div>
               )}
             </div>
           ))}
-          <button onClick={()=>go("exercises")} style={{width:"100%",marginTop:6,background:C.lime,border:"none",color:"#000",padding:"10px",borderRadius:6,cursor:"pointer",fontFamily:ff,fontWeight:700,fontSize:13}}>
+          <button onClick={()=>go("exercises")} className="btn-green" style={{width:"100%",padding:"10px",fontSize:13,marginTop:4}}>
             Estudar agora →
           </button>
         </div>
 
-        {/* Right col */}
-        <div style={{display:"flex",flexDirection:"column",gap:10}}>
-          {/* Streak calendar */}
-          <div style={{background:C.surface,border:`1px solid ${C.edge}`,borderRadius:8,padding:16}}>
-            <p style={{fontSize:11,fontWeight:700,letterSpacing:2,color:C.ash,marginBottom:12}}>SEQUÊNCIA — {user.streak} DIAS</p>
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <div className="card" style={{padding:18}}>
+            <h3 style={{fontWeight:700,fontSize:14,color:C.n900,marginBottom:12}}>🔥 Sequência — {user.streak} dias</h3>
             <div style={{display:"flex",gap:4}}>
               {week.map((d,i)=>(
-                <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-                  <div style={{width:"100%",aspectRatio:"1",borderRadius:4,background:studied[i]?C.lime:C.edge,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:studied[i]?"#000":C.ash,fontWeight:700}}>
+                <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+                  <div style={{width:"100%",aspectRatio:"1",borderRadius:6,background:studied[i]?C.g500:C.n100,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:studied[i]?"#fff":C.n400,fontWeight:700}}>
                     {studied[i]?"✓":d}
                   </div>
-                  <p style={{color:C.fog,fontSize:8,textTransform:"uppercase"}}>{d}</p>
+                  <p style={{color:C.n400,fontSize:8,textTransform:"uppercase"}}>{d}</p>
                 </div>
               ))}
             </div>
-            {user.shields>0&&<p style={{color:C.violet,fontSize:11,marginTop:10,fontWeight:600}}>↳ {user.shields} escudo de proteção ativo</p>}
           </div>
-          {/* Performance */}
-          <div style={{background:C.surface,border:`1px solid ${C.edge}`,borderRadius:8,padding:16,flex:1}}>
-            <p style={{fontSize:11,fontWeight:700,letterSpacing:2,color:C.ash,marginBottom:12}}>DESEMPENHO POR ÁREA</p>
+          <div className="card" style={{padding:18,flex:1}}>
+            <h3 style={{fontWeight:700,fontSize:14,color:C.n900,marginBottom:12}}>Desempenho por área</h3>
             {areas.map(({l,v,c})=>(
               <div key={l} style={{marginBottom:10}}>
                 <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                  <span style={{fontSize:11,color:C.ash}}>{l}</span>
-                  <span style={{fontSize:11,fontWeight:700,color:c}}>{v}%</span>
+                  <span style={{fontSize:12,color:C.n500}}>{l}</span>
+                  <span style={{fontSize:12,fontWeight:700,color:c}}>{v}%</span>
                 </div>
-                <div style={{height:3,background:C.edge,borderRadius:2}}>
+                <div style={{height:4,background:C.n100,borderRadius:2}}>
                   <div style={{height:"100%",width:`${v}%`,background:c,borderRadius:2}}/>
                 </div>
               </div>
@@ -508,82 +632,87 @@ function Dashboard({user,go,openCheckout,lv,openSpin}){
           </div>
         </div>
       </div>
-
-      {/* Ad banner */}
-      {user.plan==="free"&&(
-        <div style={{background:C.amberFade,border:`1px dashed rgba(255,184,0,.25)`,borderRadius:6,padding:"10px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <span style={{color:C.ash,fontSize:11}}>Espaço Google AdSense — visível apenas no plano gratuito</span>
-          <button onClick={()=>openCheckout(PLANS[2])} style={{background:"transparent",border:`1px solid ${C.amber}`,color:C.amber,padding:"5px 12px",borderRadius:4,cursor:"pointer",fontFamily:ff,fontWeight:700,fontSize:11}}>Remover →</button>
-        </div>
-      )}
     </div>
   );
 }
 
-/* ─── EXERCISES ──────────────────────────────────────────────────── */
-function Exercises({user,setModal,addXP,addCoins}){
+// ── EXERCISES ─────────────────────────────────────────────────────
+function Exercises({user,setModal,addXP,addCoins,spendCredits,openCheckout}){
   const [idx,setIdx]=useState(0);
   const [sel,setSel]=useState(null);
   const [pom,setPom]=useState(25*60);
   const [pomOn,setPomOn]=useState(false);
-  const [pomMode,setPomMode]=useState("focus");
   const ref=useRef(null);
   const q=QUESTIONS[idx];
-  const ans=sel!==null;
+  const answered=sel!==null;
 
   useEffect(()=>{
-    if(pomOn){ ref.current=setInterval(()=>setPom(t=>{ if(t<=1){clearInterval(ref.current);setPomOn(false);addXP&&addXP(40);return pomMode==="focus"?5*60:25*60;} return t-1; }),1000); }
+    if(pomOn){ ref.current=setInterval(()=>setPom(t=>{ if(t<=1){clearInterval(ref.current);setPomOn(false);addXP&&addXP(40);return 25*60;} return t-1;}),1000); }
     return()=>clearInterval(ref.current);
   },[pomOn]);
 
   const fmt=s=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
-  const pick=(i)=>{ if(ans)return; setSel(i); if(i===q.ans){addXP&&addXP(q.xp);addCoins&&addCoins(2);} };
+
+  const handleAnswer=(i)=>{
+    if(answered)return;
+    if(!user){ setModal("register"); return; }
+    const ok=spendCredits(CREDIT_COST);
+    if(!ok)return;
+    setSel(i);
+    if(i===q.ans){ addXP(q.xp); addCoins(2); }
+  };
+
+  const next=()=>{ if(idx<QUESTIONS.length-1){setIdx(i=>i+1);setSel(null);} };
+  const prev=()=>{ if(idx>0){setIdx(i=>i-1);setSel(null);} };
 
   return(
     <div style={{maxWidth:760,margin:"0 auto",padding:"32px 28px"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:24,flexWrap:"wrap",gap:12}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20,flexWrap:"wrap",gap:12}}>
         <div>
-          <p style={{color:C.ash,fontSize:10,letterSpacing:2,textTransform:"uppercase",marginBottom:4}}>Banco de questões ENEM</p>
-          <h1 style={{fontFamily:fd,fontSize:40}}>{idx+1}<span style={{color:C.ash}}>/{QUESTIONS.length}</span></h1>
+          <p style={{color:C.n500,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Banco de questões</p>
+          <h1 style={{fontFamily:fd,fontSize:36,color:C.g900,fontWeight:900}}>{idx+1} <span style={{color:C.n400,fontSize:24}}>/ {QUESTIONS.length}</span></h1>
+          {user&&<p style={{color:user.credits<2500?C.rose:C.n500,fontSize:12,marginTop:4,fontWeight:500}}>⚡ {user.credits.toLocaleString()} créditos restantes · cada questão custa {CREDIT_COST.toLocaleString()}</p>}
         </div>
         {/* Pomodoro */}
-        <div style={{background:C.surface,border:`1px solid ${pomOn?C.lime:C.edge}`,borderRadius:8,padding:"10px 16px",display:"flex",alignItems:"center",gap:12}}>
+        <div className="card" style={{padding:"12px 18px",display:"flex",alignItems:"center",gap:12,border:pomOn?`1.5px solid ${C.g500}`:`1px solid ${C.n100}`}}>
           <div>
-            <p style={{color:C.ash,fontSize:9,letterSpacing:2,marginBottom:2}}>{pomMode==="focus"?"FOCO":"PAUSA"}</p>
-            <p style={{fontFamily:fd,fontSize:26,color:pomOn?C.lime:C.snow,lineHeight:1}}>{fmt(pom)}</p>
+            <p style={{color:C.n500,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>Pomodoro</p>
+            <p style={{fontFamily:fd,fontSize:26,color:pomOn?C.g700:C.n700,lineHeight:1,fontWeight:900}}>{fmt(pom)}</p>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:4}}>
-            <button onClick={()=>setPomOn(a=>!a)} style={{background:pomOn?C.rose:C.lime,border:"none",color:"#000",padding:"4px 10px",borderRadius:4,cursor:"pointer",fontFamily:ff,fontWeight:700,fontSize:11}}>
-              {pomOn?"Pausar":"Iniciar"}
+            <button onClick={()=>setPomOn(a=>!a)} className="btn-green" style={{padding:"5px 12px",fontSize:11}}>
+              {pomOn?"Pausar":"▶ Iniciar"}
             </button>
-            <button onClick={()=>{setPomOn(false);setPom(25*60);setPomMode("focus");}} style={{background:"transparent",border:`1px solid ${C.edge}`,color:C.ash,padding:"3px 8px",borderRadius:4,cursor:"pointer",fontFamily:ff,fontSize:10}}>Reset</button>
+            <button onClick={()=>{setPomOn(false);setPom(25*60);}} className="btn-outline" style={{padding:"4px 10px",fontSize:11}}>Reset</button>
           </div>
         </div>
       </div>
 
-      {/* Progress */}
-      <div style={{height:2,background:C.edge,borderRadius:1,marginBottom:24}}>
-        <div style={{height:"100%",width:`${((idx+1)/QUESTIONS.length)*100}%`,background:C.lime,borderRadius:1,transition:"width .4s"}}/>
+      {/* Progress bar */}
+      <div style={{height:4,background:C.n100,borderRadius:2,marginBottom:22,overflow:"hidden"}}>
+        <div style={{height:"100%",width:`${((idx+1)/QUESTIONS.length)*100}%`,background:`linear-gradient(90deg,${C.g600},${C.g400})`,borderRadius:2,transition:"width .4s"}}/>
       </div>
 
-      <div style={{background:C.surface,border:`1px solid ${C.edge}`,borderRadius:10,padding:24,marginBottom:12}}>
-        <div style={{display:"flex",gap:6,marginBottom:16}}>
-          <span style={{border:`1px solid ${C.edge}`,borderRadius:3,padding:"2px 10px",fontSize:10,fontWeight:700,color:C.lime,letterSpacing:1}}>{q.area.toUpperCase()}</span>
-          <span style={{border:`1px solid ${C.edge}`,borderRadius:3,padding:"2px 10px",fontSize:10,color:C.ash}}>ENEM {q.year}</span>
-          <span style={{border:`1px solid rgba(255,184,0,.2)`,borderRadius:3,padding:"2px 10px",fontSize:10,color:C.amber}}>+{q.xp} XP</span>
+      <div className="card" style={{padding:26,marginBottom:14}}>
+        <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+          <span style={{background:C.g100,border:`1px solid ${C.n100}`,borderRadius:6,padding:"3px 12px",fontSize:11,fontWeight:700,color:C.g700}}>{q.area}</span>
+          <span style={{background:C.n50,border:`1px solid ${C.n100}`,borderRadius:6,padding:"3px 12px",fontSize:11,color:C.n500}}>ENEM {q.year}</span>
+          <span style={{background:C.amberL,border:`1px solid rgba(217,119,6,.2)`,borderRadius:6,padding:"3px 12px",fontSize:11,color:C.amber,fontWeight:700}}>+{q.xp} XP · {CREDIT_COST.toLocaleString()} créditos</span>
         </div>
-        <p style={{fontSize:15,lineHeight:1.9,marginBottom:22,color:C.snow,fontWeight:300}}>{q.q}</p>
-        <div style={{display:"flex",flexDirection:"column",gap:7}}>
+        <p style={{fontSize:15,lineHeight:1.9,color:C.n900,marginBottom:22,fontWeight:400}}>{q.q}</p>
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
           {q.opts.map((opt,i)=>{
-            let bg=C.ink,bc=C.edge,col=C.snow;
-            if(ans){
-              if(i===q.ans){bg=C.limeFade;bc=C.lime;col=C.lime;}
-              else if(i===sel&&i!==q.ans){bg=C.roseFade;bc=C.rose;col=C.rose;}
-              else{col=C.ash;}
+            let bg=C.g50,bc=C.n100,col=C.n700,fw=400;
+            if(answered){
+              if(i===q.ans){bg="#F0FDF4";bc=C.g500;col=C.g700;fw=600;}
+              else if(i===sel&&i!==q.ans){bg=C.roseL;bc=C.rose;col=C.rose;fw=600;}
+              else{col=C.n400;}
             }
             return(
-              <button key={i} onClick={()=>pick(i)} style={{background:bg,border:`1px solid ${bc}`,borderRadius:6,padding:"12px 16px",cursor:ans?"default":"pointer",color:col,fontFamily:ff,fontSize:14,textAlign:"left",transition:"all .15s",display:"flex",gap:12,alignItems:"center",fontWeight:ans&&i===q.ans?600:400}}>
-                <span style={{fontFamily:fd,fontSize:14,letterSpacing:1,color:ans&&i===q.ans?C.lime:ans&&i===sel?C.rose:C.fog,flexShrink:0}}>{String.fromCharCode(65+i)}</span>
+              <button key={i} onClick={()=>handleAnswer(i)} style={{background:bg,border:`1.5px solid ${bc}`,borderRadius:10,padding:"13px 16px",cursor:answered?"default":"pointer",color:col,fontFamily:ff,fontSize:14,textAlign:"left",transition:"all .2s",display:"flex",gap:12,alignItems:"center",fontWeight:fw}}>
+                <span style={{width:26,height:26,borderRadius:6,background:answered&&i===q.ans?C.g600:answered&&i===sel&&i!==q.ans?C.rose:C.white,border:`1.5px solid ${answered&&i===q.ans?C.g600:answered&&i===sel&&i!==q.ans?C.rose:C.n200}`,color:answered&&(i===q.ans||(i===sel&&i!==q.ans))?"#fff":C.n400,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0}}>
+                  {String.fromCharCode(65+i)}
+                </span>
                 {opt}
               </button>
             );
@@ -591,54 +720,54 @@ function Exercises({user,setModal,addXP,addCoins}){
         </div>
       </div>
 
-      {ans&&(
-        <div style={{background:sel===q.ans?C.limeFade:C.roseFade,border:`1px solid ${sel===q.ans?C.lime:C.rose}`,borderRadius:8,padding:14,marginBottom:12}}>
-          <p style={{fontWeight:700,color:sel===q.ans?C.lime:C.rose,marginBottom:4,fontSize:12,letterSpacing:1}}>{sel===q.ans?`CORRETO — +${q.xp} XP`:"INCORRETO"}</p>
-          <p style={{color:C.ash,fontSize:13,lineHeight:1.8,fontWeight:300}}>{q.exp}</p>
+      {answered&&(
+        <div style={{background:sel===q.ans?C.g50:C.roseL,border:`1.5px solid ${sel===q.ans?C.g500:C.rose}`,borderRadius:10,padding:16,marginBottom:14}}>
+          <p style={{fontWeight:700,color:sel===q.ans?C.g700:C.rose,marginBottom:5,fontSize:13}}>{sel===q.ans?`✅ Correto! +${q.xp} XP`:"❌ Incorreto — veja a explicação:"}</p>
+          <p style={{color:C.n700,fontSize:13,lineHeight:1.8,fontWeight:300}}>{q.exp}</p>
         </div>
       )}
 
-      {!user&&ans&&(
-        <div style={{background:C.limeFade,border:"1px solid rgba(57,255,20,.2)",borderRadius:6,padding:"10px 16px",marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
-          <p style={{color:C.lime,fontSize:12,fontWeight:600}}>Crie uma conta para salvar seu XP e progresso</p>
-          <button onClick={()=>setModal("register")} style={{background:C.lime,border:"none",color:"#000",padding:"6px 14px",borderRadius:4,cursor:"pointer",fontFamily:ff,fontWeight:700,fontSize:12}}>Criar conta →</button>
+      {!user&&(
+        <div style={{background:C.g50,border:`1.5px solid ${C.g300}`,borderRadius:10,padding:"12px 18px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+          <p style={{color:C.g700,fontSize:13,fontWeight:600}}>Crie uma conta gratuita para responder questões e ganhar 10.000 créditos</p>
+          <button onClick={()=>setModal("register")} className="btn-green" style={{padding:"7px 16px",fontSize:12}}>Criar conta →</button>
         </div>
       )}
 
       <div style={{display:"flex",justifyContent:"space-between"}}>
-        <button onClick={()=>{if(idx>0){setIdx(i=>i-1);setSel(null);}}} disabled={idx===0} style={{background:"transparent",border:`1px solid ${C.edge}`,color:idx===0?C.fog:C.ash,padding:"9px 18px",borderRadius:6,cursor:idx===0?"default":"pointer",fontFamily:ff,fontWeight:600,fontSize:13}}>← Anterior</button>
-        <button onClick={()=>{if(idx<QUESTIONS.length-1){setIdx(i=>i+1);setSel(null);}}} disabled={idx===QUESTIONS.length-1} style={{background:idx===QUESTIONS.length-1?C.surface:C.lime,border:"none",color:idx===QUESTIONS.length-1?C.fog:"#000",padding:"9px 20px",borderRadius:6,cursor:idx===QUESTIONS.length-1?"default":"pointer",fontFamily:ff,fontWeight:700,fontSize:13}}>Próxima →</button>
+        <button onClick={prev} disabled={idx===0} className="btn-outline" style={{opacity:idx===0?.4:1,cursor:idx===0?"default":"pointer"}}>← Anterior</button>
+        <button onClick={next} disabled={idx===QUESTIONS.length-1} className="btn-green" style={{opacity:idx===QUESTIONS.length-1?.4:1,cursor:idx===QUESTIONS.length-1?"default":"pointer"}}>Próxima →</button>
       </div>
     </div>
   );
 }
 
-/* ─── STRATEGIES ─────────────────────────────────────────────────── */
+// ── STRATEGIES ────────────────────────────────────────────────────
 function Strategies(){
   const items=[
-    {n:"01",tag:"Produtividade",title:"Pomodoro para ENEM",body:"Ciclos de 45min de foco + 15min de revisão ativa. O ENEM exige concentração prolongada — 25min é insuficiente. Use o timer integrado nos exercícios."},
+    {n:"01",tag:"Produtividade",title:"Pomodoro para ENEM",body:"Ciclos de 45min de foco + 15min de revisão ativa. O ENEM exige concentração prolongada. Use o timer integrado nos exercícios da plataforma."},
     {n:"02",tag:"Planejamento",title:"Priorize pelo peso",body:"Matemática + Linguagens = 40% das questões. Com menos de 120 dias, dedique 60% do tempo nessas áreas. Ciências Humanas é a mais rápida de recuperar."},
     {n:"03",tag:"Memorização",title:"Revisão espaçada",body:"Revise no dia seguinte → 3 dias → 7 → 21. Consolida memória de longo prazo. Use as missões semanais da plataforma para manter a cadência."},
     {n:"04",tag:"Redação",title:"Estrutura nota 1000",body:"Tese no 1º parágrafo. Cada desenvolvimento: argumento + evidência + conexão. Proposta: agente + ação + meio + finalidade + detalhamento. Obrigatório."},
-    {n:"05",tag:"Prova",title:"Resolução estratégica",body:"Elimine 2 alternativas: chance vai de 20% para 33%. 'Sempre', 'nunca', 'todos' = geralmente pegadinha. Marque, avance, volte. Máx. 3 min por questão."},
-    {n:"06",tag:"Mental",title:"Controle da ansiedade",body:"8h de sono nas 3 noites anteriores vale mais que estudar na véspera. Respiração 4-7-8 antes da prova. Chegue 30 min antes do horário."},
+    {n:"05",tag:"Prova",title:"Resolução estratégica",body:"Elimine 2 alternativas: chance vai de 20% para 33%. 'Sempre', 'nunca', 'todos' costumam ser pegadinhas. Máx. 3 min por questão."},
+    {n:"06",tag:"Mental",title:"Controle da ansiedade",body:"8h de sono nas 3 noites anteriores vale mais que estudar na véspera. Respiração 4-7-8 antes da prova. Chegue 30 min antes."},
   ];
   return(
     <div style={{maxWidth:1080,margin:"0 auto",padding:"40px 28px"}}>
-      <div style={{marginBottom:48}}>
-        <p style={{color:C.lime,fontSize:11,fontWeight:700,letterSpacing:3,textTransform:"uppercase",marginBottom:10}}>Métodos comprovados</p>
-        <h1 style={{fontFamily:fd,fontSize:56}}>ESTRATÉGIAS <span style={{color:C.lime}}>QUE FUNCIONAM.</span></h1>
-        <p style={{color:C.ash,fontSize:14,marginTop:8,fontWeight:300}}>Validadas por quem tirou 900+ pontos no ENEM</p>
+      <div style={{marginBottom:44}}>
+        <span style={{background:C.g100,color:C.g700,fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:100,textTransform:"uppercase",letterSpacing:1}}>Métodos comprovados</span>
+        <h1 style={{fontFamily:fd,fontSize:48,color:C.g900,marginTop:12,marginBottom:8,fontWeight:900}}>Estratégias que funcionam.</h1>
+        <p style={{color:C.n500,fontSize:14,fontWeight:300}}>Validadas por quem tirou 900+ pontos no ENEM</p>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:1,background:C.edge,border:`1px solid ${C.edge}`,borderRadius:10,overflow:"hidden"}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:16}}>
         {items.map(({n,tag,title,body})=>(
-          <div key={n} className="hov" style={{background:C.bg,padding:28,transition:"background .2s",cursor:"default"}}>
+          <div key={n} className="card" style={{padding:26}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
-              <span style={{fontFamily:fd,fontSize:13,color:C.lime,letterSpacing:2}}>{n}</span>
-              <span style={{border:`1px solid ${C.edge}`,borderRadius:3,padding:"2px 8px",fontSize:9,color:C.ash,letterSpacing:1}}>{tag.toUpperCase()}</span>
+              <span style={{fontFamily:fd,fontSize:13,color:C.g600,fontWeight:700,letterSpacing:1}}>{n}</span>
+              <span style={{background:C.g50,border:`1px solid ${C.n100}`,borderRadius:100,padding:"2px 10px",fontSize:10,color:C.n500,fontWeight:600}}>{tag}</span>
             </div>
-            <h3 style={{fontWeight:700,fontSize:17,marginBottom:10,color:C.snow}}>{title}</h3>
-            <p style={{color:C.ash,fontSize:13,lineHeight:1.8,fontWeight:300}}>{body}</p>
+            <h3 style={{fontWeight:700,fontSize:17,marginBottom:10,color:C.n900}}>{title}</h3>
+            <p style={{color:C.n500,fontSize:13,lineHeight:1.8,fontWeight:300}}>{body}</p>
           </div>
         ))}
       </div>
@@ -646,97 +775,92 @@ function Strategies(){
   );
 }
 
-/* ─── RANKING ────────────────────────────────────────────────────── */
+// ── RANKING ───────────────────────────────────────────────────────
 function Ranking(){
   return(
     <div style={{maxWidth:640,margin:"0 auto",padding:"40px 28px"}}>
-      <div style={{marginBottom:32}}>
-        <p style={{color:C.lime,fontSize:11,fontWeight:700,letterSpacing:3,textTransform:"uppercase",marginBottom:10}}>Esta semana</p>
-        <h1 style={{fontFamily:fd,fontSize:56}}>RANKING <span style={{color:C.lime}}>NACIONAL</span></h1>
-        <p style={{color:C.ash,fontSize:13,marginTop:6}}>Você está em 6º lugar — 1.640 XP para o 5º</p>
+      <div style={{marginBottom:28}}>
+        <span style={{background:C.g100,color:C.g700,fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:100,textTransform:"uppercase",letterSpacing:1}}>Esta semana</span>
+        <h1 style={{fontFamily:fd,fontSize:48,color:C.g900,marginTop:12,fontWeight:900}}>Ranking Nacional</h1>
+        <p style={{color:C.n500,fontSize:13,marginTop:4,fontWeight:300}}>Você está em 6º lugar — 1.640 XP para o 5º</p>
       </div>
-      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
         {RANKING.map((r,i)=>(
-          <div key={r.pos} style={{background:r.isUser?C.limeFade:i<3?"rgba(255,184,0,.03)":C.surface,border:`1px solid ${r.isUser?C.lime:i<3?C.amberFade:C.edge}`,borderRadius:6,padding:"12px 16px",display:"flex",alignItems:"center",gap:14}}>
-            <span style={{fontFamily:fd,fontSize:18,color:i===0?C.amber:i===1?"#C0C0C0":i===2?"#CD7F32":C.fog,width:24,textAlign:"center"}}>
+          <div key={r.pos} className="card" style={{padding:"14px 18px",display:"flex",alignItems:"center",gap:14,border:r.isUser?`1.5px solid ${C.g500}`:undefined,background:r.isUser?C.g50:undefined}}>
+            <span style={{fontFamily:fd,fontSize:18,color:i===0?C.amber:i===1?"#9CA3AF":i===2?"#D97706":C.n400,width:26,textAlign:"center",fontWeight:900}}>
               {i<3?["1","2","3"][i]:r.pos}
             </span>
-            <div style={{width:32,height:32,borderRadius:4,background:r.isUser?C.lime:C.lift,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:13,color:r.isUser?"#000":C.ash,fontFamily:fd,flexShrink:0}}>
+            <div style={{width:36,height:36,borderRadius:8,background:r.isUser?C.g600:C.g50,border:`1.5px solid ${r.isUser?C.g600:C.n100}`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:14,color:r.isUser?"#fff":C.g700,fontFamily:fd,flexShrink:0}}>
               {r.name[0]}
             </div>
             <div style={{flex:1}}>
-              <p style={{fontWeight:600,fontSize:13,color:r.isUser?C.lime:C.snow}}>{r.name}{r.isUser?" — você":""}</p>
-              <p style={{color:C.ash,fontSize:11}}>{r.streak}d de streak</p>
+              <p style={{fontWeight:600,fontSize:14,color:r.isUser?C.g700:C.n900}}>{r.name}{r.isUser?" — você":""}</p>
+              <p style={{color:C.n400,fontSize:11}}>{r.streak} dias de streak</p>
             </div>
             <div style={{textAlign:"right"}}>
-              <p style={{fontFamily:fd,fontSize:20,color:i<3?C.amber:r.isUser?C.lime:C.snow}}>{r.xp.toLocaleString()}</p>
-              <p style={{color:C.ash,fontSize:9,letterSpacing:1}}>XP</p>
+              <p style={{fontFamily:fd,fontSize:22,color:i<3?C.amber:r.isUser?C.g600:C.n700,fontWeight:900}}>{r.xp.toLocaleString()}</p>
+              <p style={{color:C.n400,fontSize:9,letterSpacing:1,textTransform:"uppercase"}}>XP</p>
             </div>
           </div>
         ))}
       </div>
-      <div style={{marginTop:16,background:"rgba(129,140,248,.06)",border:"1px solid rgba(129,140,248,.2)",borderRadius:6,padding:"14px 18px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <p style={{color:C.violet,fontSize:13,fontWeight:600}}>Estude mais 55 questões hoje para subir uma posição</p>
-        <button style={{background:C.violet,border:"none",color:"#fff",padding:"7px 16px",borderRadius:4,cursor:"pointer",fontFamily:ff,fontWeight:700,fontSize:12}}>Estudar →</button>
+      <div style={{marginTop:14,background:C.g50,border:`1.5px solid ${C.n100}`,borderRadius:10,padding:"14px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+        <p style={{color:C.g700,fontSize:13,fontWeight:600}}>Estude mais hoje para subir no ranking</p>
+        <button className="btn-green" style={{padding:"7px 16px",fontSize:12}}>Estudar agora →</button>
       </div>
     </div>
   );
 }
 
-/* ─── SPIN MODAL ─────────────────────────────────────────────────── */
+// ── SPIN MODAL ────────────────────────────────────────────────────
 function SpinModal({onClose,addXP,addCoins}){
-  const [spinning,setSpinning]=useState(false);
-  const [prize,setPrize]=useState(null);
+  const prizes=["50 XP","100 XP","20 créditos","50 créditos","Escudo","7 dias grátis"];
+  const colors=[C.g600,C.g700,C.amber,C.amber,C.sky,"#7C3AED"];
   const [deg,setDeg]=useState(0);
+  const [prize,setPrize]=useState(null);
+  const [spinning,setSpinning]=useState(false);
 
   const spin=()=>{
     if(spinning||prize)return;
     setSpinning(true);
     const extra=720+Math.random()*360;
     setDeg(d=>d+extra);
-    const idx=Math.floor(Math.random()*SPIN_PRIZES.length);
-    setTimeout(()=>{
-      setPrize(SPIN_PRIZES[idx]);
-      setSpinning(false);
-      if(idx===0)addXP(50);
-      if(idx===1)addXP(100);
-      if(idx===2)addCoins(20);
-      if(idx===3)addCoins(50);
-    },2800);
+    const idx=Math.floor(Math.random()*prizes.length);
+    setTimeout(()=>{setPrize(prizes[idx]);setSpinning(false);if(idx===0)addXP(50);if(idx===1)addXP(100);if(idx===2)addCoins(20);if(idx===3)addCoins(50);},2800);
   };
 
   return(
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.92)",backdropFilter:"blur(16px)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={prize?onClose:undefined}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.ink,border:`1px solid ${C.edge}`,borderRadius:12,padding:36,maxWidth:380,width:"100%",textAlign:"center"}}>
-        <p style={{color:C.ash,fontSize:10,letterSpacing:3,textTransform:"uppercase",marginBottom:8}}>Recompensa diária</p>
-        <h2 style={{fontFamily:fd,fontSize:32,marginBottom:24}}>ROLETA <span style={{color:C.violet}}>DE PRÊMIOS</span></h2>
+    <div style={{position:"fixed",inset:0,background:"rgba(20,64,26,.65)",backdropFilter:"blur(10px)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={prize?onClose:undefined}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#fff",border:`1px solid ${C.n100}`,borderRadius:20,padding:36,maxWidth:380,width:"100%",textAlign:"center",boxShadow:"0 24px 64px rgba(0,0,0,.15)"}}>
+        <p style={{color:C.n500,fontSize:11,fontWeight:700,letterSpacing:2,textTransform:"uppercase",marginBottom:6}}>Recompensa diária</p>
+        <h2 style={{fontFamily:fd,fontSize:28,color:C.g900,marginBottom:24,fontWeight:900}}>Roleta de Prêmios</h2>
 
         <div style={{position:"relative",width:200,height:200,margin:"0 auto 24px"}}>
-          <div style={{position:"absolute",top:"-12px",left:"50%",transform:"translateX(-50%)",zIndex:10,color:C.violet,fontSize:20}}>▼</div>
-          <div style={{width:"100%",height:"100%",borderRadius:"50%",background:`conic-gradient(${SPIN_COLORS.map((c,i)=>`${c} ${i/SPIN_COLORS.length*360}deg ${(i+1)/SPIN_COLORS.length*360}deg`).join(",")})`,transform:`rotate(${deg}deg)`,transition:spinning?"transform 2.8s cubic-bezier(.17,.67,.12,.99)":"none",border:`3px solid ${C.edge}`}}/>
-          <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:36,height:36,borderRadius:"50%",background:C.ink,border:`2px solid ${C.edge}`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:fd,fontSize:14,zIndex:5}}>E</div>
+          <div style={{position:"absolute",top:"-14px",left:"50%",transform:"translateX(-50%)",color:C.g700,fontSize:22}}>▼</div>
+          <div style={{width:"100%",height:"100%",borderRadius:"50%",background:`conic-gradient(${colors.map((c,i)=>`${c} ${i/colors.length*360}deg ${(i+1)/colors.length*360}deg`).join(",")})`,transform:`rotate(${deg}deg)`,transition:spinning?"transform 2.8s cubic-bezier(.17,.67,.12,.99)":"none",border:`4px solid ${C.n100}`,boxShadow:"0 8px 32px rgba(26,92,34,.15)"}}/>
+          <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:38,height:38,borderRadius:"50%",background:"#fff",border:`3px solid ${C.n100}`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:fd,fontSize:16,color:C.g700,fontWeight:900,zIndex:5}}>E</div>
         </div>
 
         {prize?(
-          <div style={{background:"rgba(129,140,248,.07)",border:"1px solid rgba(129,140,248,.25)",borderRadius:8,padding:18,marginBottom:18}}>
-            <p style={{fontFamily:fd,fontSize:14,color:C.ash,letterSpacing:2,marginBottom:6}}>VOCÊ GANHOU</p>
-            <p style={{fontFamily:fd,fontSize:36,color:C.violet}}>{prize}</p>
+          <div style={{background:C.g50,border:`1.5px solid ${C.g400}`,borderRadius:12,padding:18,marginBottom:18}}>
+            <p style={{color:C.n500,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>Você ganhou</p>
+            <p style={{fontFamily:fd,fontSize:32,color:C.g700,fontWeight:900}}>{prize}</p>
           </div>
         ):(
-          <div style={{background:C.surface,border:`1px solid ${C.edge}`,borderRadius:6,padding:10,marginBottom:16}}>
-            <p style={{color:C.ash,fontSize:10,marginBottom:6,letterSpacing:1}}>PRÊMIOS POSSÍVEIS</p>
+          <div style={{background:C.g50,border:`1px solid ${C.n100}`,borderRadius:8,padding:10,marginBottom:16}}>
+            <p style={{color:C.n400,fontSize:10,marginBottom:6,textTransform:"uppercase",letterSpacing:1,fontWeight:600}}>Prêmios possíveis</p>
             <div style={{display:"flex",flexWrap:"wrap",gap:5,justifyContent:"center"}}>
-              {SPIN_PRIZES.map((p,i)=>(
-                <span key={p} style={{background:C.ink,border:`1px solid ${C.edge}`,borderRadius:3,padding:"3px 8px",fontSize:10,color:SPIN_COLORS[i],fontWeight:700}}>{p}</span>
+              {prizes.map((p,i)=>(
+                <span key={p} style={{background:"#fff",border:`1px solid ${C.n100}`,borderRadius:100,padding:"2px 10px",fontSize:10,color:colors[i],fontWeight:700}}>{p}</span>
               ))}
             </div>
           </div>
         )}
 
-        {!prize&&<button onClick={spin} disabled={spinning} style={{width:"100%",background:spinning?C.surface:C.violet,border:"none",color:"#fff",padding:"12px",borderRadius:6,cursor:spinning?"default":"pointer",fontFamily:ff,fontWeight:800,fontSize:15,marginBottom:10}}>
+        {!prize&&<button onClick={spin} disabled={spinning} className="btn-green" style={{width:"100%",padding:"12px",fontSize:15,marginBottom:10,opacity:spinning?.7:1}}>
           {spinning?"Girando...":"Girar agora"}
         </button>}
-        <button onClick={onClose} style={{background:"transparent",border:`1px solid ${C.edge}`,color:C.ash,padding:"8px 20px",borderRadius:5,cursor:"pointer",fontFamily:ff,fontSize:12}}>
+        <button onClick={onClose} className="btn-outline" style={{padding:"8px 20px",fontSize:12}}>
           {prize?"Fechar":"Cancelar"}
         </button>
       </div>
@@ -744,90 +868,88 @@ function SpinModal({onClose,addXP,addCoins}){
   );
 }
 
-/* ─── CHECKOUT ───────────────────────────────────────────────────── */
+// ── CHECKOUT ──────────────────────────────────────────────────────
 function Checkout({plan,go}){
   const [method,setMethod]=useState("pix");
   const [success,setSuccess]=useState(false);
   const [loading,setLoading]=useState(false);
   const pay=()=>{setLoading(true);setTimeout(()=>{setLoading(false);setSuccess(true);},1800);};
-  const inp={width:"100%",background:C.surface,border:`1px solid ${C.edge}`,borderRadius:6,padding:"11px 14px",color:C.snow,fontFamily:ff,fontSize:14};
+  const inp={width:"100%",background:C.g50,border:`1.5px solid ${C.n100}`,borderRadius:8,padding:"11px 14px",color:C.n900,fontFamily:ff,fontSize:14};
 
   if(!plan)return null;
 
   if(success)return(
     <div style={{maxWidth:420,margin:"0 auto",padding:"80px 28px",textAlign:"center"}}>
-      <div style={{width:64,height:64,borderRadius:10,background:C.lime,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto 20px"}}>✓</div>
-      <h1 style={{fontFamily:fd,fontSize:44,color:C.lime,marginBottom:10}}>PAGAMENTO APROVADO</h1>
-      <p style={{color:C.ash,marginBottom:28,fontSize:14,lineHeight:1.7}}>Plano <strong style={{color:C.snow}}>{plan.label}</strong> ativado. Verifique seu e-mail com os dados de acesso.</p>
-      <button onClick={()=>go("dashboard")} style={{background:C.lime,border:"none",color:"#000",padding:"12px 28px",borderRadius:6,cursor:"pointer",fontFamily:ff,fontWeight:800,fontSize:15}}>Acessar dashboard →</button>
+      <div style={{width:72,height:72,background:C.g100,border:`2px solid ${C.g500}`,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto 20px"}}>✓</div>
+      <h1 style={{fontFamily:fd,fontSize:44,color:C.g700,marginBottom:10,fontWeight:900}}>Pagamento aprovado!</h1>
+      <p style={{color:C.n500,marginBottom:28,fontSize:14,lineHeight:1.7,fontWeight:300}}>Plano <strong style={{color:C.n900}}>{plan.label}</strong> ativado. Verifique seu e-mail com os dados de acesso.</p>
+      <button onClick={()=>go("dashboard")} className="btn-green" style={{padding:"13px 28px",fontSize:15}}>Acessar dashboard →</button>
     </div>
   );
 
   return(
     <div style={{maxWidth:520,margin:"0 auto",padding:"40px 28px"}}>
-      <button onClick={()=>go("landing")} style={{background:"transparent",border:"none",color:C.ash,cursor:"pointer",fontFamily:ff,marginBottom:20,fontSize:13}}>← Voltar</button>
-      <p style={{color:C.ash,fontSize:10,letterSpacing:3,textTransform:"uppercase",marginBottom:8}}>Finalizar compra</p>
-      <h1 style={{fontFamily:fd,fontSize:44,marginBottom:20}}>CHECKOUT</h1>
+      <button onClick={()=>go("landing")} style={{background:"transparent",border:"none",color:C.n500,cursor:"pointer",fontFamily:ff,marginBottom:20,fontSize:13}}>← Voltar</button>
+      <p style={{color:C.n500,fontSize:11,fontWeight:700,letterSpacing:2,textTransform:"uppercase",marginBottom:8}}>Finalizar compra</p>
+      <h1 style={{fontFamily:fd,fontSize:40,color:C.g900,marginBottom:20,fontWeight:900}}>Checkout seguro</h1>
 
-      {/* Plan summary */}
-      <div style={{background:C.surface,border:`1px solid ${plan.hi?C.lime:C.edge}`,borderRadius:8,padding:18,marginBottom:20}}>
+      <div className="card" style={{padding:18,marginBottom:20,border:plan.hi?`1.5px solid ${C.g600}`:undefined}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div>
-            <p style={{fontWeight:700,fontSize:16}}>{plan.label}</p>
-            <p style={{color:C.ash,fontSize:12,marginTop:2}}>ENEMPro · Acesso completo</p>
+            <p style={{fontWeight:700,fontSize:16,color:C.n900}}>{plan.label}</p>
+            <p style={{color:C.n500,fontSize:12,marginTop:2}}>ENEMPro · Créditos ilimitados</p>
           </div>
           <div style={{textAlign:"right"}}>
-            <p style={{fontFamily:fd,fontSize:38,color:C.lime}}>R${plan.price}</p>
-            <p style={{color:C.ash,fontSize:11}}>{plan.period}</p>
+            <p style={{fontFamily:fd,fontSize:38,color:C.g700,fontWeight:900}}>R${plan.price}</p>
+            <p style={{color:C.n400,fontSize:11}}>{plan.period}</p>
           </div>
         </div>
-        <div style={{borderTop:`1px solid ${C.edge}`,marginTop:12,paddingTop:12,display:"flex",gap:16,flexWrap:"wrap"}}>
-          {["Garantia 7 dias","Acesso imediato","Cancele quando quiser"].map(t=>(
-            <span key={t} style={{color:C.lime,fontSize:11,fontWeight:600}}>↳ {t}</span>
+        <div style={{borderTop:`1px solid ${C.n100}`,marginTop:12,paddingTop:12,display:"flex",gap:16,flexWrap:"wrap"}}>
+          {["✓ Garantia 7 dias","✓ Acesso imediato","✓ Créditos ilimitados"].map(t=>(
+            <span key={t} style={{color:C.g600,fontSize:11,fontWeight:600}}>{t}</span>
           ))}
         </div>
       </div>
 
-      {/* Method toggle */}
-      <div style={{display:"flex",gap:6,marginBottom:18}}>
+      <div style={{display:"flex",gap:8,marginBottom:18}}>
         {[["pix","PIX"],["card","Cartão"]].map(([m,l])=>(
-          <button key={m} onClick={()=>setMethod(m)} style={{flex:1,background:method===m?C.limeFade:"transparent",border:`1px solid ${method===m?C.lime:C.edge}`,color:method===m?C.lime:C.ash,padding:"9px",borderRadius:6,cursor:"pointer",fontFamily:ff,fontWeight:700,fontSize:13}}>
+          <button key={m} onClick={()=>setMethod(m)} className={method===m?"btn-green":"btn-outline"} style={{flex:1,padding:"10px"}}>
             {l}
           </button>
         ))}
       </div>
 
       {method==="pix"?(
-        <div style={{background:C.surface,border:`1px solid ${C.edge}`,borderRadius:8,padding:22,textAlign:"center"}}>
-          <div style={{width:140,height:140,background:C.ink,border:`1px solid ${C.edge}`,borderRadius:8,margin:"0 auto 14px",display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <p style={{color:C.ash,fontSize:11,lineHeight:1.6}}>QR Code PIX<br/>via seu gateway</p>
+        <div className="card" style={{padding:22,textAlign:"center"}}>
+          <div style={{width:140,height:140,background:C.g50,border:`1px solid ${C.n100}`,borderRadius:12,margin:"0 auto 14px",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <p style={{color:C.n400,fontSize:11,lineHeight:1.6}}>QR Code PIX<br/>via seu gateway</p>
           </div>
-          <div style={{background:C.ink,border:`1px solid ${C.edge}`,borderRadius:4,padding:"8px 12px",fontFamily:"monospace",fontSize:10,color:C.ash,marginBottom:18,wordBreak:"break-all",textAlign:"left"}}>
+          <div style={{background:C.g50,border:`1px solid ${C.n100}`,borderRadius:6,padding:"8px 12px",fontFamily:"monospace",fontSize:10,color:C.n400,marginBottom:18,wordBreak:"break-all",textAlign:"left"}}>
             00020126580014br.gov.bcb.pix0136[SEU-GATEWAY]
           </div>
-          <button onClick={pay} disabled={loading} style={{background:loading?C.surface:C.lime,border:"none",color:"#000",padding:"12px",borderRadius:6,cursor:loading?"wait":"pointer",fontFamily:ff,fontWeight:800,fontSize:14,width:"100%"}}>
-            {loading?"Confirmando...":"Confirmar PIX"}
+          <button onClick={pay} disabled={loading} className="btn-green" style={{width:"100%",padding:"12px",fontSize:14,opacity:loading?.7:1}}>
+            {loading?"Confirmando...":"Confirmar PIX ✓"}
           </button>
         </div>
       ):(
-        <div style={{background:C.surface,border:`1px solid ${C.edge}`,borderRadius:8,padding:22}}>
+        <div className="card" style={{padding:22}}>
           {[["Número do cartão","0000 0000 0000 0000"],["Nome no cartão","NOME COMPLETO"]].map(([l,ph])=>(
             <div key={l} style={{marginBottom:12}}>
-              <label style={{color:C.ash,fontSize:10,fontWeight:700,letterSpacing:1,display:"block",marginBottom:5}}>{l.toUpperCase()}</label>
+              <label style={{color:C.n700,fontSize:11,fontWeight:600,display:"block",marginBottom:5,textTransform:"uppercase",letterSpacing:.5}}>{l}</label>
               <input style={inp} placeholder={ph}/>
             </div>
           ))}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:18}}>
             {[["Validade","12/28"],["CVV","•••"]].map(([l,ph])=>(
-              <div key={l}><label style={{color:C.ash,fontSize:10,fontWeight:700,letterSpacing:1,display:"block",marginBottom:5}}>{l.toUpperCase()}</label><input style={inp} placeholder={ph}/></div>
+              <div key={l}><label style={{color:C.n700,fontSize:11,fontWeight:600,display:"block",marginBottom:5,textTransform:"uppercase",letterSpacing:.5}}>{l}</label><input style={inp} placeholder={ph}/></div>
             ))}
           </div>
-          <button onClick={pay} disabled={loading} style={{width:"100%",background:loading?C.surface:C.lime,border:"none",color:"#000",padding:"12px",borderRadius:6,cursor:loading?"wait":"pointer",fontFamily:ff,fontWeight:800,fontSize:14}}>
+          <button onClick={pay} disabled={loading} className="btn-green" style={{width:"100%",padding:"12px",fontSize:14,opacity:loading?.7:1}}>
             {loading?"Processando...":` Pagar R$${plan.price}${plan.period}`}
           </button>
         </div>
       )}
-      <p style={{color:C.fog,fontSize:10,textAlign:"center",marginTop:12}}>SSL · PCI DSS · Dados criptografados</p>
+      <p style={{color:C.n300,fontSize:10,textAlign:"center",marginTop:12}}>🔒 SSL · PCI DSS · Dados criptografados</p>
     </div>
   );
 }
