@@ -103,12 +103,36 @@ function App(){
     setDays(Math.max(0,Math.ceil((new Date("2026-11-08")-new Date())/86400000)));
   },[]);
 
+  const API="https://enempro-backend-production.up.railway.app";
   const go=(p)=>{setPage(p);window.scrollTo(0,0);};
-  const login=(name,email)=>{
-    setUser({name,email,plan:"free",xp:2340,coins:85,streak:7,credits:CREDITS_START});
-    setAuthModal(null);go("dashboard");
+
+  const login=async(email,password,name,mode)=>{
+    try{
+      const endpoint=mode==="register"?"/api/register":"/api/login";
+      const body=mode==="register"?{name,email,password}:{email,password};
+      const res=await fetch(API+endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+      const data=await res.json();
+      if(!res.ok) throw new Error(data.error||"Erro ao entrar");
+      localStorage.setItem("enempro_token",data.token);
+      setUser({
+        name:data.user.name,
+        email:data.user.email,
+        plan:data.user.plan||"free",
+        xp:data.user.xp||0,
+        coins:data.user.coins||0,
+        streak:data.user.streak||0,
+        credits:data.user.plan&&data.user.plan!=="free"?999999:CREDITS_START,
+      });
+      setAuthModal(null);go("dashboard");
+    }catch(err){
+      alert(err.message||"Erro ao entrar. Verifique seus dados.");
+    }
   };
-  const logout=()=>{setUser(null);go("landing");};
+
+  const logout=()=>{
+    localStorage.removeItem("enempro_token");
+    setUser(null);go("landing");
+  };
   const openCheckout=(p)=>{setPlan(p);go("checkout");};
 
   const spendCredits=(cost)=>{
@@ -124,6 +148,22 @@ function App(){
     setTimeout(()=>setXpPop(null),1800);
   };
   const addCoins=(v)=>{ if(user) setUser(u=>({...u,coins:u.coins+v})); };
+
+  useEffect(()=>{
+    const token=localStorage.getItem("enempro_token");
+    if(!token)return;
+    fetch("https://enempro-backend-production.up.railway.app/api/me",{headers:{"Authorization":"Bearer "+token}})
+      .then(r=>r.json())
+      .then(data=>{
+        if(data.id){
+          setUser({
+            name:data.name,email:data.email,plan:data.plan||"free",
+            xp:data.xp||0,coins:data.coins||0,streak:data.streak||0,
+            credits:data.plan&&data.plan!=="free"?999999:CREDITS_START,
+          });
+        }
+      }).catch(()=>localStorage.removeItem("enempro_token"));
+  },[]);
 
   const lv=user?getLevel(user.xp):{level:1,pct:0,nextXp:100};
 
@@ -454,7 +494,14 @@ function Landing({days,go,setModal,openCheckout}){
 // ── AUTH MODAL ────────────────────────────────────────────────────
 function AuthModal({mode,onClose,onSwitch,onSuccess}){
   const [name,setName]=useState(""),[ email,setEmail]=useState(""),[ pass,setPass]=useState("");
+  const [loading,setLoading]=useState(false);
   const inp={width:"100%",background:C.g50,border:`1.5px solid ${C.n100}`,borderRadius:8,padding:"11px 14px",color:C.n900,fontFamily:ff,fontSize:14,marginBottom:12};
+  const submit=async()=>{
+    if(!email||!pass){alert("Preencha e-mail e senha.");return;}
+    setLoading(true);
+    await onSuccess(email,pass,name||email.split("@")[0],mode);
+    setLoading(false);
+  };
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(20,64,26,.6)",backdropFilter:"blur(8px)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onClose}>
       <div onClick={e=>e.stopPropagation()} style={{background:"#fff",border:`1px solid ${C.n100}`,borderRadius:20,padding:36,width:"100%",maxWidth:400,boxShadow:"0 24px 64px rgba(0,0,0,.15)"}}>
@@ -469,8 +516,8 @@ function AuthModal({mode,onClose,onSwitch,onSuccess}){
         </div>
         {mode==="register"&&<input style={inp} placeholder="Seu nome completo" value={name} onChange={e=>setName(e.target.value)}/>}
         <input style={inp} type="email" placeholder="E-mail" value={email} onChange={e=>setEmail(e.target.value)}/>
-        <input style={{...inp,marginBottom:16}} type="password" placeholder="Senha" value={pass} onChange={e=>setPass(e.target.value)}/>
-        <button onClick={()=>onSuccess(name||email.split("@")[0]||"Aluno",email)} className="btn-green" style={{width:"100%",padding:"13px",fontSize:15}}>
+        <input style={{...inp,marginBottom:16}} type="password" placeholder="Senha (mínimo 6 caracteres)" value={pass} onChange={e=>setPass(e.target.value)}/>
+        <button onClick={submit} disabled={loading} className="btn-green" style={{width:"100%",padding:"13px",fontSize:15,opacity:loading?.7:1}}>
           {mode==="login"?"Entrar na conta":"Criar conta e ganhar 10.000 créditos"}
         </button>
         {mode==="register"&&(
