@@ -1,9 +1,21 @@
 require("dotenv").config();
+
+console.log("✅ PASSO 1 - server.js carregado");
+
 const express = require("express");
+console.log("✅ PASSO 2 - express carregado");
+
 const cors = require("cors");
+console.log("✅ PASSO 3 - cors carregado");
+
 const jwt = require("jsonwebtoken");
+console.log("✅ PASSO 4 - jsonwebtoken carregado");
+
 const db = require("./db");
+console.log("✅ PASSO 5 - db.js carregado");
+
 const emailService = require("./emailService");
+console.log("✅ PASSO 6 - emailService.js carregado");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -16,10 +28,9 @@ app.use(express.urlencoded({ extended: true }));
 // ── HEALTH CHECK ──────────────────────────────────────────────────
 app.get("/", (req, res) => {
   res.json({
-    status: "✅ ENEMPro Backend online",
-    version: "1.0.0",
-    users: db.getUserCount(),
-    timestamp: new Date().toISOString(),
+    status: "ONLINE",
+    version: "2.0.0",
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -264,8 +275,9 @@ function firstName(fullName) {
 // ─────────────────────────────────────────────────────────────────
 //  START
 // ─────────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`\n🚀 ENEMPro Backend rodando na porta ${PORT}`);
-  console.log(`📌 Webhook URL: http://localhost:${PORT}/webhook/laranjinha`);
-  console.log(`📌 Login URL:   http://localhost:${PORT}/api/login\n`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log("================================");
+  console.log(`🚀 ENEMPro Backend ONLINE`);
+  console.log(`🚀 Porta: ${PORT}`);
+  console.log("================================");
 });
